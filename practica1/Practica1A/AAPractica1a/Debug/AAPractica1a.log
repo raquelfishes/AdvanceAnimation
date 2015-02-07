@@ -1,0 +1,32 @@
+﻿Compilación iniciada a las 07/02/2015 17:33:21.
+     1>Proyecto "C:\Users\Raquel\Documents\master\AA\AA\Practica1A\AAPractica1a\AAPractica1a.vcxproj" en el nodo 2 (rebuild destinos).
+     1>_PrepareForClean:
+         Se eliminará el archivo "Debug\AAPractica1a.lastbuildstate".
+       InitializeBuildStatus:
+         Aplicando tarea Touch a "Debug\AAPractica1a.unsuccessfulbuild".
+       ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /I..\..\Coin3D\include /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D COIN_DLL /D SOWIN_DLL /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt Exercise.cpp LinSys.cpp Scene.cpp Test.cpp Vec2.cpp
+         Vec2.cpp
+         Test.cpp
+         Scene.cpp
+         LinSys.cpp
+         Exercise.cpp
+         Generando código...
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\Raquel\Documents\master\AA\AA\Practica1A\Debug\AAPractica1a.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:..\..\Coin3D\lib coin3d.lib sowin1d.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Debug\AAPractica1a.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"C:\Users\Raquel\Documents\master\AA\AA\Practica1A\Debug\AAPractica1a.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\Raquel\Documents\master\AA\AA\Practica1A\Debug\AAPractica1a.lib" /MACHINE:X86 Debug\Exercise.obj
+         Debug\LinSys.obj
+         Debug\Scene.obj
+         Debug\Test.obj
+         Debug\Vec2.obj
+     1>Exercise.obj : warning LNK4075: se omite '/EDITANDCONTINUE' debido a la especificación '/INCREMENTAL:NO'
+         AAPractica1a.vcxproj -> C:\Users\Raquel\Documents\master\AA\AA\Practica1A\Debug\AAPractica1a.exe
+       Manifest:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"C:\Users\Raquel\Documents\master\AA\AA\Practica1A\Debug\AAPractica1a.exe;#1" /manifest Debug\AAPractica1a.exe.intermediate.manifest
+       FinalizeBuildStatus:
+         Se eliminará el archivo "Debug\AAPractica1a.unsuccessfulbuild".
+         Aplicando tarea Touch a "Debug\AAPractica1a.lastbuildstate".
+     1>Compilación del proyecto terminada "C:\Users\Raquel\Documents\master\AA\AA\Practica1A\AAPractica1a\AAPractica1a.vcxproj" (rebuild destinos).
+
+Compilación correcta.
+
+Tiempo transcurrido 00:00:10.66
