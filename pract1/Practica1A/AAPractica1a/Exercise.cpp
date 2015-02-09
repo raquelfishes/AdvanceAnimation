@@ -231,7 +231,6 @@ void eulerExplicit(float k, float m, float d, float L, float kc, float dt, float
 	p2+=dt*v2;
 	v2+=dt*(1.0f/m)*f2;
 
-	cout << "p2: " << p2 << "   v2: " << v2  << "   f2: " << f2 << endl;
 }
 
 void eulerSymplectic(float k, float m, float d, float L, float kc, float dt, float p1, float v1, float& p2, float& v2, bool collision){
@@ -361,18 +360,21 @@ void verlet(float k, float m, float d, float L, float kc, float dt, float p1, fl
 void eulerSymplectic2(float k, float m, float d, float L, float kA, float A, float dt,
    const Vec2& p1, const Vec2& v1, Vec2& p2, Vec2& v2, Vec2& p3, Vec2& v3, Vec2& p4, Vec2& v4, bool springs, bool area){
 	
+	cout << A << endl;
+
 	//Initialize forces
 	Vec2 mg(0.0f, -m*g);
 
-	Vec2 f1(0.0f, 0.0f);
+	//Vec2 f1(0.0f, 0.0f);
 	Vec2 f2(0.0f, 0.0f);
 	Vec2 f3(0.0f, 0.0f);
 	Vec2 f4(0.0f, 0.0f);
 
 	//Add weight force
-	f1+=mg;
+	//f1+=mg;
 	f2+=mg;
 	f3+=mg;
+	f4+=mg;
 
 	//Add spring forces
    if (springs)
@@ -381,29 +383,30 @@ void eulerSymplectic2(float k, float m, float d, float L, float kA, float A, flo
       Spring2D sp23(p2, p3, L, k);
 	  Spring2D sp34(p3, p4, L, k);
       Spring2D sp41(p4, p1, L, k);
-      f1+=sp12.force1()+sp41.force2();
+      //f1+=sp12.force1()+sp41.force2();
       f2+=sp23.force1()+sp12.force2();
       f3+=sp34.force1()+sp23.force2();
 	  f4+=sp41.force1()+sp34.force2();
    }
 
    //Add damping forces
-   f1-=d*v1;
+   //f1-=d*v1;
    f2-=d*v2;
    f3-=d*v3;
    f4-=d*v4;
-
+   
     //Add triangle forces
+
    if (area)
    {
-      Triangle tri1(p1, p2, p3, A, kA);
-	  Triangle tri2(p3, p4, p1, A, kA);
-      f1+=tri1.force1()+tri2.force3();
+      Triangle tri1(p1, p2, p3, A/2, kA);
+	  Triangle tri2(p3, p4, p1, A/2, kA);
+      //f1+=tri1.force1()+tri2.force3();
       f2+=tri1.force2();
       f3+=tri1.force3()+tri2.force1();
 	  f4+=tri2.force2();
    }
-
+   
    //Integration
    v2+=dt*(1.0f/m)*f2;
    p2+=dt*v2;
@@ -411,6 +414,8 @@ void eulerSymplectic2(float k, float m, float d, float L, float kA, float A, flo
    p3+=dt*v3;
    v4+=dt*(1.0f/m)*f4;
    p4+=dt*v4;
+
+   cout << "p2: " << p2.x << " " << p2.y << " v2: " << v2.x << " " << v2.y << "\np3: " << p3.x << " " << p3.y << " v3: " << v3.x << " " << v3.y << "\np4: " << p4.x << " " << p4.y << " v4: " << v4.x << " " << v4.y << endl;
 }
 
 

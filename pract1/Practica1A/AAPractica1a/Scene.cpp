@@ -31,23 +31,23 @@ Scene::Scene(void)
 Scene::Scene(int argc, char* argv[])
 {
    // defaults:
-   testcase  = SPRING1D;
-   //method    = verlet;
-   //method    = euler_symplec;
-   method    = EULER;
-   stiffness = 1.0f;
-   stiffpenalty = 100.0f;
-   mass      = 0.1f;
-   step      = 0.003f;
-   damping   = 0.01f;
-   //testcase  = SQUARE;
-   //method    = BACK_EULER;
-   ////method    = EULER_SYMPLEC;
-   //stiffness = 100.0f;
-   //stiffarea = 100.0f;
+   //testcase  = SPRING1D;
+   ////method    = verlet;
+   ////method    = euler_symplec;
+   //method    = EULER;
+   //stiffness = 1.0f;
+   //stiffpenalty = 100.0f;
    //mass      = 0.1f;
-   //step      = 0.025f;
-   //damping   = 0.1f;
+   //step      = 0.003f;
+   //damping   = 0.01f;
+   testcase  = SQUARE;
+   //method    = BACK_EULER;
+   method    = EULER_SYMPLEC;
+   stiffness = 100.0f;
+   stiffarea = 100.0f;
+   mass      = 0.1f;
+   step      = 0.025f;
+   damping   = 0.1f;
 
    int arg=1;
    while(arg<argc)
