@@ -34,11 +34,11 @@ Scene::Scene(int argc, char* argv[])
    testcase  = SPRING1D;
    //method    = verlet;
    //method    = euler_symplec;
-   method    = EULER_SYMPLEC;
+   method    = EULER;
    stiffness = 1.0f;
    stiffpenalty = 100.0f;
    mass      = 0.1f;
-   step      = 0.1f;
+   step      = 0.003f;
    damping   = 0.01f;
    //testcase  = SQUARE;
    //method    = BACK_EULER;

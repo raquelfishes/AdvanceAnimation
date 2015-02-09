@@ -162,18 +162,25 @@ void AdvanceTimeStep1(float k, float m, float d, float L, float kc, float dt, in
 		case 1:
 			// Euler Explicit
 			eulerExplicit(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
+			break;
 		case 2:
 			// Euler Symplectic
 			eulerSymplectic(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
+			break;
 		case 3:
 			// Mid Point
 			midPoint(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
+			break;
 		case 4:
 			// Euler Implicit
 			eulerImplicit(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
+			break;
 		case 5:
 			// Verlet
 			verlet(k,m,d,L,kc,dt,p1,v1,p2,v2,p2old,collision);
+			break;
+		default:
+			break;
 	}
 }
 
@@ -191,6 +198,8 @@ void AdvanceTimeStep2(float k, float m, float d, float L, float kA, float A, flo
 		case 4:
 			// Euler Implicit
 			//eulerImplicit2(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
+			break;
+		default:
 			break;
 	}
 }
@@ -210,7 +219,7 @@ void eulerExplicit(float k, float m, float d, float L, float kc, float dt, float
 	Spring1D sp1(p1,p2,L,k);
 	f2 += sp1.force2();
 	if (p2<0.0f && collision){
-		Spring1D sp2(0.0f,p2,abs(p2),kc);
+		Spring1D sp2(0.0f,p2,0.0f,kc);
 		f2 += sp2.force2();
 	}
 
@@ -221,6 +230,8 @@ void eulerExplicit(float k, float m, float d, float L, float kc, float dt, float
 	//Position uses v prev
 	p2+=dt*v2;
 	v2+=dt*(1.0f/m)*f2;
+
+	cout << "p2: " << p2 << "   v2: " << v2  << "   f2: " << f2 << endl;
 }
 
 void eulerSymplectic(float k, float m, float d, float L, float kc, float dt, float p1, float v1, float& p2, float& v2, bool collision){
@@ -235,7 +246,7 @@ void eulerSymplectic(float k, float m, float d, float L, float kc, float dt, flo
 	Spring1D sp1(p1,p2,L,k);
 	f2 += sp1.force2();
 	if (p2<0.0f && collision){
-		Spring1D sp2(0.0f,p2,abs(p2),kc);
+		Spring1D sp2(0.0f,p2,0.0f,kc);
 		f2 += sp2.force2();
 	}
 
@@ -256,8 +267,8 @@ void midPoint(float k, float m, float d, float L, float kc, float dt, float p1, 
 	Spring1D sp1(p1,p2,L,k);
 	float a0 = (1.0f/m)*(mg - d*v2 + sp1.force2());
 	if (p2<0.0f && collision){
-		Spring1D sp2(0.0f,p2,abs(p2),kc);
-		a0+=(1.0f/m)*(sp2.force2());
+		Spring1D sp2(0.0f,p2,0.0f,kc);
+		a0-=(1.0f/m)*(sp2.force2());
 	}
 
 	//Calculate velocity: v2 at dt/2
@@ -269,10 +280,11 @@ void midPoint(float k, float m, float d, float L, float kc, float dt, float p1, 
 	//Calculate aceleration: a2 at dt/2
 	sp1 = Spring1D(p1,p2_aux,L,k);
 	float a2 = (1.0f/m)*(mg-d*v2_aux*sp1.force2());
-	if (p2<0.0f && collision){
-		Spring1D sp2(0.0f,p2,abs(p2),kc);
-		a0+=(1.0f/m)*(sp2.force2());
-	}
+	/****** PREGUNTAR A OTADUY, HAY QUE VOLVER A CALCULAR COLISION??? ******/
+	//if (p2_aux<0.0f && collision){
+	//	Spring1D sp2(0.0f,p2,abs(p2),kc);
+	//	a0-=(1.0f/m)*(sp2.force2());
+	//}
 
 	//Integrate
 	p2+=dt*v2_aux;
@@ -288,7 +300,7 @@ void eulerImplicit(float k, float m, float d, float L, float kc, float dt, float
 	Spring1D sp1(p1,p2,L,k);
 	f2 += mg - d*v2 + sp1.force2();
 	if (p2<0.0f && collision){
-		Spring1D sp2(0.0f,p2,abs(p2),kc);
+		Spring1D sp2(0.0f,p2,0.0f,kc);
 		f2 += sp2.force2();
 	}
 
