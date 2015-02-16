@@ -105,7 +105,7 @@ int GaussElimination( const MatrixMN &A, const Vector &b, Vector &x)
       for( j = i + 1; j < m; j++ )
       {
          float scale = -B(j,i) / B(i,i);
-         for( k = i; k < m; k++ )
+		 for( k = i; k < m; k++ )
             B(j,k) += scale * B(i,k);
          B(j,i) = 0.0;
          c(j) += scale * c(i);

@@ -41,8 +41,8 @@ Scene::Scene(int argc, char* argv[])
    //step      = 0.003f;
    //damping   = 0.01f;
    testcase  = SQUARE;
-   //method    = BACK_EULER;
-   method    = EULER_SYMPLEC;
+   method    = BACK_EULER;
+   //method    = EULER_SYMPLEC;
    stiffness = 100.0f;
    stiffarea = 100.0f;
    mass      = 0.1f;
@@ -226,7 +226,7 @@ void Scene::Init(void)
    p2old = p2 = Vec2(0, 0.5f);
    p3 = Vec2(0.5f, 0.5f);
    p4 = Vec2(0.5f, 1.0f);
-   v1 = v2 = v3 = Vec2::ZERO;
+   v1 = v2 = v3 = v4 = Vec2::ZERO;
    L = 0.5f;
    A = 2 * 0.5f * 0.5f;
 
