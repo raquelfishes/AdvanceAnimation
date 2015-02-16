@@ -155,59 +155,6 @@ public:
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Exercise 1
-// hanging mass point
-void AdvanceTimeStep1(float k, float m, float d, float L, float kc, float dt, int meth, float p1, float v1, float& p2, float& v2, float& p2old, bool collision)
-{
-	switch(meth){
-		case 1:
-			// Euler Explicit
-			eulerExplicit(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
-			break;
-		case 2:
-			// Euler Symplectic
-			eulerSymplectic(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
-			break;
-		case 3:
-			// Mid Point
-			midPoint(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
-			break;
-		case 4:
-			// Euler Implicit
-			eulerImplicit(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
-			break;
-		case 5:
-			// Verlet
-			verlet(k,m,d,L,kc,dt,p1,v1,p2,v2,p2old,collision);
-			break;
-		default:
-			break;
-	}
-}
-
-
-// Exercise 2
-// square
-void AdvanceTimeStep2(float k, float m, float d, float L, float kA, float A, float dt, int method,
-   const Vec2& p1, const Vec2& v1, Vec2& p2, Vec2& v2, Vec2& p3, Vec2& v3, Vec2& p4, Vec2& v4, bool springs, bool area)
-{
-	switch(method){
-		case 2:
-			// Euler Symplectic
-			eulerSymplectic2(k, m, d, L, kA, A, dt, p1, v1, p2, v2, p3, v3, p4, v4, springs, area);
-			break;
-		case 4:
-			// Euler Implicit
-			eulerImplicit2(k, m, d, L, kA, A, dt, p1, v1, p2, v2, p3, v3, p4, v4, springs, area);
-			//LinearSystemExample();
-			break;
-		default:
-			break;
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 //Euler explicit method
 void eulerExplicit(float k, float m, float d, float L, float kc, float dt, float p1, float v1, float& p2, float& v2, bool collision){
 	//Forces
@@ -218,20 +165,20 @@ void eulerExplicit(float k, float m, float d, float L, float kc, float dt, float
 	f2 += mg;
 
 	//Add Springs forces
-	Spring1D sp1(p1,p2,L,k);
+	Spring1D sp1(p1, p2, L, k);
 	f2 += sp1.force2();
 	if (p2<0.0f && collision){
-		Spring1D sp2(0.0f,p2,0.0f,kc);
+		Spring1D sp2(0.0f, p2, 0.0f, kc);
 		f2 += sp2.force2();
 	}
 
 	//Add dumping forces
-	f2-=d*v2;
+	f2 -= d*v2;
 
 	//Integrate
 	//Position uses v prev
-	p2+=dt*v2;
-	v2+=dt*(1.0f/m)*f2;
+	p2 += dt*v2;
+	v2 += dt*(1.0f / m)*f2;
 
 }
 
@@ -244,20 +191,20 @@ void eulerSymplectic(float k, float m, float d, float L, float kc, float dt, flo
 	f2 += mg;
 
 	//Add Spring forces
-	Spring1D sp1(p1,p2,L,k);
+	Spring1D sp1(p1, p2, L, k);
 	f2 += sp1.force2();
 	if (p2<0.0f && collision){
-		Spring1D sp2(0.0f,p2,0.0f,kc);
+		Spring1D sp2(0.0f, p2, 0.0f, kc);
 		f2 += sp2.force2();
 	}
 
 	//Add dumping forces
-	f2-=d*v2;
+	f2 -= d*v2;
 
 	//Integrate
 	//Position uses v new
-	v2+=dt*(1.0f/m)*f2;
-	p2+=dt*v2;
+	v2 += dt*(1.0f / m)*f2;
+	p2 += dt*v2;
 }
 
 void midPoint(float k, float m, float d, float L, float kc, float dt, float p1, float v1, float& p2, float& v2, bool collision){
@@ -265,30 +212,32 @@ void midPoint(float k, float m, float d, float L, float kc, float dt, float p1, 
 	float mg = m*(-g);
 
 	//Calculate aceleration: a0 = F/m at t
-	Spring1D sp1(p1,p2,L,k);
-	float a0 = (1.0f/m)*(mg - d*v2 + sp1.force2());
+	Spring1D sp1(p1, p2, L, k);
+	float a0 = (1.0f / m)*(mg - d*v2 + sp1.force2());
 	if (p2<0.0f && collision){
-		Spring1D sp2(0.0f,p2,0.0f,kc);
-		a0-=(1.0f/m)*(sp2.force2());
+		Spring1D sp2(0.0f, p2, 0.0f, kc);
+		a0 -= (1.0f / m)*(sp2.force2());
 	}
 
 	//Calculate velocity: v2 at dt/2
-	float v2_aux = v2+(dt/2.0f)*a0;
+	float v2_aux = v2 + (dt / 2.0f)*a0;
 
 	//Calculate position: p2 at dt/2
-	float p2_aux = p2+(dt/2.0f)*v2_aux;
+	float p2_aux = p2 + (dt / 2.0f)*v2_aux;
 
 	//Calculate aceleration: a2 at dt/2
-	sp1 = Spring1D(p1,p2_aux,L,k);
-	float a2 = (1.0f/m)*(mg-d*v2_aux*sp1.force2());
+	sp1 = Spring1D(p1, p2_aux, L, k);
+	float a2 = (1.0f / m)*(mg - d*v2_aux*sp1.force2());
 	if (p2_aux<0.0f && collision){
-		Spring1D sp2(0.0f,p2,abs(p2),kc);
-		a0-=(1.0f/m)*(sp2.force2());
+		Spring1D sp2(0.0f, p2, abs(p2), kc);
+		a0 -= (1.0f / m)*(sp2.force2());
 	}
 
 	//Integrate
-	p2+=dt*v2_aux;
-	v2+=dt*a2;
+	//Midpoint method
+	//x(t+dt) = x(t) + v(t+dt/2)*dt
+	p2 += dt*v2_aux;
+	v2 += dt*a2;
 }
 
 void eulerImplicit(float k, float m, float d, float L, float kc, float dt, float p1, float v1, float& p2, float& v2, bool collision){
@@ -297,31 +246,31 @@ void eulerImplicit(float k, float m, float d, float L, float kc, float dt, float
 	float f2 = 0.0f;
 
 	//Add Spring forces
-	Spring1D sp1(p1,p2,L,k);
+	Spring1D sp1(p1, p2, L, k);
 	f2 += mg - d*v2 + sp1.force2();
 	if (p2<0.0f && collision){
-		Spring1D sp2(0.0f,p2,0.0f,kc);
+		Spring1D sp2(0.0f, p2, 0.0f, kc);
 		f2 += sp2.force2();
 	}
 
 	//Set up system
 	//v(h)=v(0)+h/m*F(0)+h/m*dFdv*v(0) / 1-h/m*dF/dv-h^2/m*dF/dx
-	
+
 	//b=v(0)+h/m*F(0)+h/m*dFdv*v(0) 
 	//We don't want have h/m so we multiplicate with m
 	//b=v(0)*m+h*F(0)+h*dFdv*v(0)
-	float b = (m+dt*d)*v2 + dt*f2;
-	
+	float b = (m + dt*d)*v2 + dt*f2;
+
 	//m_impl = 1-h/m*dF/dv-h^2/m*dF/dx
 	//We don't want have h/m so we multiplicate with m
 	//m_impl = m-h*dF/dv-h^2*dF/dx
-	float m_impl = (m+dt*d-dt*dt*sp1.dF2dp2());
+	float m_impl = (m + dt*d - dt*dt*sp1.dF2dp2());
 
-   //Solve for velocity
-   v2 = b/m_impl;
+	//Solve for velocity
+	v2 = b / m_impl;
 
-   //Integrate position
-   p2+=dt*v2;
+	//Integrate position
+	p2 += dt*v2;
 
 }
 
@@ -332,35 +281,41 @@ void verlet(float k, float m, float d, float L, float kc, float dt, float p1, fl
 	//Forces
 	float mg = m*(-g);
 	float f2 = 0.0f;
-	
+
 	//Add weight force to f2
 	f2 += mg;
 
 	//Add Spring forces
-	Spring1D sp1(p1,p2,L,k);
+	Spring1D sp1(p1, p2, L, k);
 	f2 += sp1.force2();
 	if (p2<0.0f && collision){
-		Spring1D sp2(0.0f,p2,abs(p2),kc);
+		Spring1D sp2(0.0f, p2, abs(p2), kc);
 		f2 += sp2.force2();
 	}
 
 	//Add damping forces
-	f2-=d*v2;
+	f2 -= d*v2;
+
+	//Calculate aceleration
+	//Newton: f=m*a => a =f/m
+	float a = (1.0f / m)*f2;
 
 	//Integrate
-	float a = (1.0f/m)*f2;
-	p2=2.0f*p2-p2old+dt*dt*a;
-	v2=(p2-p2old)/(2.0f*dt);
-	
+	//Verlet method
+	//x(t+dt)=2*x(t)-x(t-dt)+a(t)*dt^2
+	//v(t+dt)=(x(t+dt)-x(t-dt))/2*dt
+	p2 = 2.0f*p2 - p2old + dt*dt*a;
+	v2 = (p2 - p2old) / (2.0f*dt);
+
 	//Updating old position
-	p2old=p_aux;
+	p2old = p_aux;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void eulerSymplectic2(float k, float m, float d, float L, float kA, float A, float dt,
-   const Vec2& p1, const Vec2& v1, Vec2& p2, Vec2& v2, Vec2& p3, Vec2& v3, Vec2& p4, Vec2& v4, bool springs, bool area){
-	
+	const Vec2& p1, const Vec2& v1, Vec2& p2, Vec2& v2, Vec2& p3, Vec2& v3, Vec2& p4, Vec2& v4, bool springs, bool area){
+
 	cout << A << endl;
 
 	//Initialize forces
@@ -373,56 +328,55 @@ void eulerSymplectic2(float k, float m, float d, float L, float kA, float A, flo
 
 	//Add weight force
 	//f1+=mg;
-	f2+=mg;
-	f3+=mg;
-	f4+=mg;
+	f2 += mg;
+	f3 += mg;
+	f4 += mg;
 
-	//Add spring forces
-   if (springs)
-   {
-      Spring2D sp12(p1, p2, L, k);
-      Spring2D sp23(p2, p3, L, k);
-	  Spring2D sp34(p3, p4, L, k);
-      Spring2D sp41(p4, p1, L, k);
-      //f1+=sp12.force1()+sp41.force2();
-      f2+=sp23.force1()+sp12.force2();
-      f3+=sp34.force1()+sp23.force2();
-	  f4+=sp41.force1()+sp34.force2();
-   }
+	if (springs)
+	{
+		//Add spring forces
+		Spring2D sp12(p1, p2, L, k);
+		Spring2D sp23(p2, p3, L, k);
+		Spring2D sp34(p3, p4, L, k);
+		Spring2D sp41(p4, p1, L, k);
+		//f1+=sp12.force1()+sp41.force2();
+		f2 += sp23.force1() + sp12.force2();
+		f3 += sp34.force1() + sp23.force2();
+		f4 += sp41.force1() + sp34.force2();
+	}
 
-   //Add damping forces
-   //f1-=d*v1;
-   f2-=d*v2;
-   f3-=d*v3;
-   f4-=d*v4;
-   
-    //Add triangle forces
+	//Add damping forces
+	//f1-=d*v1;
+	f2 -= d*v2;
+	f3 -= d*v3;
+	f4 -= d*v4;
 
-   if (area)
-   {
-      Triangle tri1(p1, p2, p3, A/2, kA);
-	  Triangle tri2(p3, p4, p1, A/2, kA);
-      //f1+=tri1.force1()+tri2.force3();
-      f2+=tri1.force2();
-      f3+=tri1.force3()+tri2.force1();
-	  f4+=tri2.force2();
-   }
-   
-   //Integration
-   v2+=dt*(1.0f/m)*f2;
-   p2+=dt*v2;
-   v3+=dt*(1.0f/m)*f3;
-   p3+=dt*v3;
-   v4+=dt*(1.0f/m)*f4;
-   p4+=dt*v4;
+	if (area)
+	{
+		//Add triangle forces
+		Triangle tri1(p1, p2, p3, A / 2, kA);
+		Triangle tri2(p3, p4, p1, A / 2, kA);
+		//f1+=tri1.force1()+tri2.force3();
+		f2 += tri1.force2();
+		f3 += tri1.force3() + tri2.force1();
+		f4 += tri2.force2();
+	}
 
-   //cout << "p2: " << p2.x << " " << p2.y << " v2: " << v2.x << " " << v2.y << "\np3: " << p3.x << " " << p3.y << " v3: " << v3.x << " " << v3.y << "\np4: " << p4.x << " " << p4.y << " v4: " << v4.x << " " << v4.y << endl;
+	//Integration
+	v2 += dt*(1.0f / m)*f2;
+	p2 += dt*v2;
+	v3 += dt*(1.0f / m)*f3;
+	p3 += dt*v3;
+	v4 += dt*(1.0f / m)*f4;
+	p4 += dt*v4;
+
+	//cout << "p2: " << p2.x << " " << p2.y << " v2: " << v2.x << " " << v2.y << "\np3: " << p3.x << " " << p3.y << " v3: " << v3.x << " " << v3.y << "\np4: " << p4.x << " " << p4.y << " v4: " << v4.x << " " << v4.y << endl;
 }
 
 void eulerImplicit2(float k, float m, float d, float L, float kA, float A0, float dt,
 	const Vec2& p1, const Vec2& v1, Vec2& p2, Vec2& v2, Vec2& p3, Vec2& v3, Vec2& p4, Vec2& v4, bool springs, bool area){
 
-	
+
 	//Initialize forces
 	Vec2 mg(0.0f, -m*g);
 
@@ -446,12 +400,13 @@ void eulerImplicit2(float k, float m, float d, float L, float kA, float A0, floa
 	//Springs
 	if (springs)
 	{
+		//Add spring forces
 		Spring2D sp12(p1, p2, L, k);
 		Spring2D sp23(p2, p3, L, k);
 		Spring2D sp34(p3, p4, L, k);
 		Spring2D sp41(p4, p1, L, k);
 
-		//f1 += sp12.force1() + sp31.force2();
+		//f1 += sp12.force1() + sp41.force2();
 		f2 += sp23.force1() + sp12.force2();
 		f3 += sp34.force1() + sp23.force2();
 		f4 += sp41.force1() + sp34.force2();
@@ -473,13 +428,15 @@ void eulerImplicit2(float k, float m, float d, float L, float kA, float A0, floa
 
 	if (area)
 	{
-		Triangle tri1(p1, p2, p3, A0/2, kA);
-		Triangle tri2(p3, p4, p1, A0/2, kA);
+		//Add triangle forces
+		Triangle tri1(p1, p2, p3, A0 / 2, kA);
+		Triangle tri2(p3, p4, p1, A0 / 2, kA);
 		//f1+=tri1.force1()+tri2.force3();
 		f2 += tri1.force2();
 		f3 += tri1.force3() + tri2.force1();
 		f4 += tri2.force2();
 
+		//Collect triangle Jacobians
 		dF1dp1 += tri1.dF1dp1() + tri2.dF3dp3();
 		dF1dp2 += tri1.dF1dp2();
 		dF1dp4 += tri2.dF3dp2();
@@ -526,6 +483,9 @@ void eulerImplicit2(float k, float m, float d, float L, float kA, float A0, floa
 	Vec2 b3 = (m + dt*d)*v3 + dt*f3;
 	Vec2 b4 = (m + dt*d)*v4 + dt*f4;
 
+	//Linear system. Solve for x in A*x=b
+	//Solve for new velocities
+	//We use a 8x8 matrix but the first two rows are not used, but have to be initialized
 	MatrixMN A(8, 8);
 	A(0, 0) = A11.v[0][0]; A(0, 1) = A11.v[0][1]; A(1, 0) = A11.v[1][0]; A(1, 1) = A11.v[1][1];
 	A(0, 2) = A12.v[0][0]; A(0, 3) = A12.v[0][1]; A(1, 2) = A12.v[1][0]; A(1, 3) = A12.v[1][1];
@@ -541,7 +501,7 @@ void eulerImplicit2(float k, float m, float d, float L, float kA, float A0, floa
 	A(4, 2) = A32.v[0][0]; A(4, 3) = A32.v[0][1]; A(5, 2) = A32.v[1][0]; A(5, 3) = A32.v[1][1];
 	A(4, 4) = A33.v[0][0]; A(4, 5) = A33.v[0][1]; A(5, 4) = A33.v[1][0]; A(5, 5) = A33.v[1][1];
 	A(4, 6) = A34.v[0][0]; A(4, 7) = A34.v[0][1]; A(5, 6) = A34.v[1][0]; A(5, 7) = A34.v[1][1];
-	
+
 	A(6, 0) = A41.v[0][0]; A(6, 1) = A41.v[0][1]; A(7, 0) = A41.v[1][0]; A(7, 1) = A41.v[1][1];
 	A(6, 2) = A42.v[0][0]; A(6, 3) = A42.v[0][1]; A(7, 2) = A42.v[1][0]; A(7, 3) = A42.v[1][1];
 	A(6, 4) = A43.v[0][0]; A(6, 5) = A43.v[0][1]; A(7, 4) = A43.v[1][0]; A(7, 5) = A43.v[1][1];
@@ -565,6 +525,58 @@ void eulerImplicit2(float k, float m, float d, float L, float kA, float A0, floa
 
 	//cout << "p2: " << p2.x << " " << p2.y << " v2: " << v2.x << " " << v2.y << "\np3: " << p3.x << " " << p3.y << " v3: " << v3.x << " " << v3.y << "\np4: " << p4.x << " " << p4.y << " v4: " << v4.x << " " << v4.y << endl;
 
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Exercise 1
+// hanging mass point
+void AdvanceTimeStep1(float k, float m, float d, float L, float kc, float dt, int meth, float p1, float v1, float& p2, float& v2, float& p2old, bool collision)
+{
+	switch(meth){
+		case 1:
+			// Euler Explicit
+			eulerExplicit(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
+			break;
+		case 2:
+			// Euler Symplectic
+			eulerSymplectic(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
+			break;
+		case 3:
+			// Mid Point
+			midPoint(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
+			break;
+		case 4:
+			// Euler Implicit
+			eulerImplicit(k,m,d,L,kc,dt,p1,v1,p2,v2,collision);
+			break;
+		case 5:
+			// Verlet
+			verlet(k,m,d,L,kc,dt,p1,v1,p2,v2,p2old,collision);
+			break;
+		default:
+			break;
+	}
+}
+
+
+// Exercise 2
+// square
+void AdvanceTimeStep2(float k, float m, float d, float L, float kA, float A, float dt, int method,
+   const Vec2& p1, const Vec2& v1, Vec2& p2, Vec2& v2, Vec2& p3, Vec2& v3, Vec2& p4, Vec2& v4, bool springs, bool area)
+{
+	switch(method){
+		case 2:
+			// Euler Symplectic
+			eulerSymplectic2(k, m, d, L, kA, A, dt, p1, v1, p2, v2, p3, v3, p4, v4, springs, area);
+			break;
+		case 4:
+			// Euler Implicit
+			eulerImplicit2(k, m, d, L, kA, A, dt, p1, v1, p2, v2, p3, v3, p4, v4, springs, area);
+			break;
+		default:
+			break;
+	}
 }
 
 
