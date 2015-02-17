@@ -392,10 +392,10 @@ void eulerImplicit2(float k, float m, float d, float L, float kA, float A0, floa
 	f4 += mg;
 
 	//Initialize Jacobians
-	Matrix2 dF1dp1 = Matrix2::ZERO, dF1dp2 = Matrix2::ZERO, dF1dp4 = Matrix2::ZERO;
-	Matrix2 dF2dp2 = Matrix2::ZERO, dF2dp3 = Matrix2::ZERO, dF2dp1 = Matrix2::ZERO;
-	Matrix2 dF3dp3 = Matrix2::ZERO, dF3dp2 = Matrix2::ZERO, dF3dp4 = Matrix2::ZERO;
-	Matrix2 dF4dp4 = Matrix2::ZERO, dF4dp1 = Matrix2::ZERO, dF4dp3 = Matrix2::ZERO;
+	//Matrix2 dF1dp1 = Matrix2::ZERO, dF1dp2 = Matrix2::ZERO, dF1dp4 = Matrix2::ZERO;
+	Matrix2 dF2dp2 = Matrix2::ZERO, dF2dp3 = Matrix2::ZERO, dF2dp4 = Matrix2::ZERO;
+	Matrix2 dF3dp2 = Matrix2::ZERO, dF3dp3 = Matrix2::ZERO, dF3dp4 = Matrix2::ZERO;
+	Matrix2 dF4dp2 = Matrix2::ZERO, dF4dp3 = Matrix2::ZERO, dF4dp4 = Matrix2::ZERO;
 
 	//Springs
 	if (springs)
@@ -412,18 +412,15 @@ void eulerImplicit2(float k, float m, float d, float L, float kA, float A0, floa
 		f4 += sp41.force1() + sp34.force2();
 
 		//Collect spring Jacobians
-		dF1dp1 += sp12.dF1dp1() + sp41.dF2dp2();
-		dF1dp2 += sp12.dF1dp2();
-		dF1dp4 += sp41.dF2dp1();
-		dF2dp2 += sp23.dF1dp1() + sp12.dF2dp2();
+		dF2dp2 += sp12.dF2dp2() + sp23.dF1dp1();
 		dF2dp3 += sp23.dF1dp2();
-		dF2dp1 += sp12.dF2dp1();
-		dF3dp3 += sp34.dF1dp1() + sp23.dF2dp2();
-		dF3dp4 += sp34.dF1dp2();
+		dF2dp4 += Matrix2::ZERO;
 		dF3dp2 += sp23.dF2dp1();
-		dF4dp4 += sp41.dF1dp1() + sp34.dF2dp2();
-		dF4dp1 += sp41.dF1dp2();
+		dF3dp3 += sp23.dF2dp2() + sp34.dF1dp1();
+		dF3dp4 += sp34.dF1dp2();
+		dF4dp2 += Matrix2::ZERO;
 		dF4dp3 += sp34.dF2dp1();
+		dF4dp4 += sp34.dF2dp2() + sp41.dF1dp1();
 	}
 
 	if (area)
@@ -437,18 +434,16 @@ void eulerImplicit2(float k, float m, float d, float L, float kA, float A0, floa
 		f4 += tri2.force2();
 
 		//Collect triangle Jacobians
-		dF1dp1 += tri1.dF1dp1() + tri2.dF3dp3();
-		dF1dp2 += tri1.dF1dp2();
-		dF1dp4 += tri2.dF3dp2();
 		dF2dp2 += tri1.dF2dp2();
 		dF2dp3 += tri1.dF2dp3();
-		dF2dp1 += tri1.dF2dp1();
+		dF2dp4 += Matrix2::ZERO;
+		dF3dp2 += tri1.dF3dp2();
 		dF3dp3 += tri1.dF3dp3() + tri2.dF1dp1();
 		dF3dp4 += tri2.dF1dp2();
-		dF3dp2 += tri1.dF3dp2();
-		dF4dp4 += tri2.dF2dp2();
-		dF4dp1 += tri2.dF2dp3();
+		dF4dp2 += Matrix2::ZERO;
 		dF4dp3 += tri2.dF2dp1();
+		dF4dp4 += tri2.dF2dp2();
+
 	}
 
 	//Add damping forces
@@ -460,22 +455,17 @@ void eulerImplicit2(float k, float m, float d, float L, float kA, float A0, floa
 	//Set up A matrix
 	//Axy = m - dt*dFxdvy - dt^2*dfxdpy
 
-	Matrix2 A11 = (m + dt*d)*Matrix2::IDENTITY - (dt*dt)*dF1dp1;
-	Matrix2 A12 = Matrix2::ZERO;
-	Matrix2 A13 = Matrix2::ZERO;
-	Matrix2 A14 = Matrix2::ZERO;
-	Matrix2 A22 = (m + dt*d)*Matrix2::IDENTITY - (dt*dt)*dF2dp2;
-	Matrix2 A23 = (-dt*dt)*dF2dp3;
-	Matrix2 A21 = (-dt*dt)*dF2dp1;
-	Matrix2 A24 = Matrix2::ZERO;
-	Matrix2 A33 = (m + dt*d)*Matrix2::IDENTITY - (dt*dt)*dF3dp3;
-	Matrix2 A34 = (-dt*dt)*dF3dp4;
-	Matrix2 A32 = (-dt*dt)*dF3dp2;
-	Matrix2 A31 = Matrix2::ZERO;
-	Matrix2 A44 = (m + dt*d)*Matrix2::IDENTITY - (dt*dt)*dF4dp4;
-	Matrix2 A41 = (-dt*dt)*dF4dp1;
-	Matrix2 A43 = (-dt*dt)*dF4dp3;
-	Matrix2 A42 = Matrix2::ZERO;
+	Matrix2 A11 = (m + dt*d)*Matrix2::IDENTITY - (dt*dt)*dF2dp2;
+	Matrix2 A12 = (-dt*dt)*dF2dp3;
+	Matrix2 A13 = (-dt*dt)*dF2dp4;
+
+	Matrix2 A21 = (-dt*dt)*dF3dp2;
+	Matrix2 A22 = (m + dt*d)*Matrix2::IDENTITY - (dt*dt)*dF3dp3;
+	Matrix2 A23 = (-dt*dt)*dF3dp4;
+
+	Matrix2 A31 = (-dt*dt)*dF4dp2;
+	Matrix2 A32 = (-dt*dt)*dF4dp3;
+	Matrix2 A33 = (m + dt*d)*Matrix2::IDENTITY - (dt*dt)*dF4dp4;
 
 	//Set up b vector
 	//Vec2 b1 = (m + dt*d)*v1 + dt*f1;
@@ -486,37 +476,28 @@ void eulerImplicit2(float k, float m, float d, float L, float kA, float A0, floa
 	//Linear system. Solve for x in A*x=b
 	//Solve for new velocities
 	//We use a 8x8 matrix but the first two rows are not used, but have to be initialized
-	MatrixMN A(8, 8);
+	MatrixMN A(6, 6);
 	A(0, 0) = A11.v[0][0]; A(0, 1) = A11.v[0][1]; A(1, 0) = A11.v[1][0]; A(1, 1) = A11.v[1][1];
 	A(0, 2) = A12.v[0][0]; A(0, 3) = A12.v[0][1]; A(1, 2) = A12.v[1][0]; A(1, 3) = A12.v[1][1];
 	A(0, 4) = A13.v[0][0]; A(0, 5) = A13.v[0][1]; A(1, 4) = A13.v[1][0]; A(1, 5) = A13.v[1][1];
-	A(0, 6) = A14.v[0][0]; A(0, 7) = A14.v[0][1]; A(1, 6) = A14.v[1][0]; A(1, 7) = A14.v[1][1];
 
 	A(2, 0) = A21.v[0][0]; A(2, 1) = A21.v[0][1]; A(3, 0) = A21.v[1][0]; A(3, 1) = A21.v[1][1];
 	A(2, 2) = A22.v[0][0]; A(2, 3) = A22.v[0][1]; A(3, 2) = A22.v[1][0]; A(3, 3) = A22.v[1][1];
 	A(2, 4) = A23.v[0][0]; A(2, 5) = A23.v[0][1]; A(3, 4) = A23.v[1][0]; A(3, 5) = A23.v[1][1];
-	A(2, 6) = A24.v[0][0]; A(2, 7) = A24.v[0][1]; A(3, 6) = A24.v[1][0]; A(3, 7) = A24.v[1][1];
 
 	A(4, 0) = A31.v[0][0]; A(4, 1) = A31.v[0][1]; A(5, 0) = A31.v[1][0]; A(5, 1) = A31.v[1][1];
 	A(4, 2) = A32.v[0][0]; A(4, 3) = A32.v[0][1]; A(5, 2) = A32.v[1][0]; A(5, 3) = A32.v[1][1];
 	A(4, 4) = A33.v[0][0]; A(4, 5) = A33.v[0][1]; A(5, 4) = A33.v[1][0]; A(5, 5) = A33.v[1][1];
-	A(4, 6) = A34.v[0][0]; A(4, 7) = A34.v[0][1]; A(5, 6) = A34.v[1][0]; A(5, 7) = A34.v[1][1];
 
-	A(6, 0) = A41.v[0][0]; A(6, 1) = A41.v[0][1]; A(7, 0) = A41.v[1][0]; A(7, 1) = A41.v[1][1];
-	A(6, 2) = A42.v[0][0]; A(6, 3) = A42.v[0][1]; A(7, 2) = A42.v[1][0]; A(7, 3) = A42.v[1][1];
-	A(6, 4) = A43.v[0][0]; A(6, 5) = A43.v[0][1]; A(7, 4) = A43.v[1][0]; A(7, 5) = A43.v[1][1];
-	A(6, 6) = A44.v[0][0]; A(6, 7) = A44.v[0][1]; A(7, 6) = A44.v[1][0]; A(7, 7) = A44.v[1][1];
-
-	Vector b(8);
-	b(0) = 0.0f; b(1) = 0.0f;
-	b(2) = b2.x; b(3) = b2.y;
-	b(4) = b3.x; b(5) = b3.y;
-	b(6) = b4.x; b(7) = b4.y;
-	Vector x(8);
+	Vector b(6);
+	b(0) = b2.x; b(1) = b2.y;
+	b(2) = b3.x; b(3) = b3.y;
+	b(4) = b4.x; b(5) = b4.y;
+	Vector x(6);
 	GaussElimination(A, b, x);
-	v2.x = x(2); v2.y = x(3);
-	v3.x = x(4); v3.y = x(5);
-	v4.x = x(6); v4.y = x(7);
+	v2.x = x(0); v2.y = x(1);
+	v3.x = x(2); v3.y = x(3);
+	v4.x = x(4); v4.y = x(5);
 
 	//Integrate positions
 	p2 += dt*v2;
