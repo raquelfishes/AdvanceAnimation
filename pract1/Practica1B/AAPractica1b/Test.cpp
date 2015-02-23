@@ -1,7 +1,7 @@
 // Test.cpp : Defines the entry point for the console application.
 //
 
-//#include <iostream>
+#include <iostream>
 //#include <tchar.h>
 
 // TODO: reference additional headers your program requires here
@@ -50,11 +50,13 @@ static void keyboardfunc(void *data, SoEventCallback *eventCB)
    const SoEvent *event = eventCB->getEvent();
    if(SO_KEY_PRESS_EVENT(event, S))
    {
+	  cout << "pausa" << endl;
       scene->Pause();
       eventCB->setHandled();
    }
    else if(SO_KEY_PRESS_EVENT(event, I))
    {
+	  cout << "implicito" << endl;
       scene->ChangeImplicit();
       eventCB->setHandled();
    }
