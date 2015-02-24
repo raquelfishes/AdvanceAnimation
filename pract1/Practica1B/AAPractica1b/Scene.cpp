@@ -10,9 +10,9 @@ using namespace std;
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/nodes/SoSeparator.h>
 
-int Scene::xPoints=2;
-int Scene::yPoints=2;
-int Scene::zPoints=2;
+int Scene::xPoints=5;
+int Scene::yPoints=5;
+int Scene::zPoints=5;
 float Scene::xSize=1.0f;
 float Scene::ySize=1.0f;
 float Scene::zSize=1.0f;

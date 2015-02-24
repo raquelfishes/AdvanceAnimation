@@ -5,60 +5,35 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-Vec3 forceSpring(Spring* spring){
-	//Compute force spring from exercise 2 practice 1b
-	//L = (p1 - p2).length();
-	//dLdx = (1.0f / L) * (p1 - p2);
-	//F = (k*(L0 - L)) * dLdx;
-	float length = spring->GetLength();
-	Vec3 dLdX = (1.0f / length) * (spring->GetPointA()->GetPosition() - spring->GetPointB()->GetPosition());
-	Vec3 force = (spring->stiffness * (spring->GetRest() - length)) * dLdX;
-	return force;
-}
-
-
-void addSymplecticForces(Spring* spring){
-	Vec3 force = forceSpring(spring);
-	if (!spring->HalfFixed()){
-		//Both points not fixed
-		spring->GetPointA()->AddForce(force);
-		spring->GetPointB()->AddForce(-force);
-	}
-	else{
-		//Some point fixed
-		spring->GetPointA()->IsFixed() ? spring->GetPointB()->AddForce(-force) : spring->GetPointA()->AddForce(force);
-	}
-}
-
-void addImplicitForces(Spring* spring){
-	Vec3 force = forceSpring(spring);
-	if (!spring->HalfFixed()){
-		//Both points not fixed
-		spring->GetPointA()->AddForce(force);
-		spring->GetPointB()->AddForce(-force);
-	}
-	else{
-		//Some point fixed
-		//if A fixed 
-		spring->GetPointA()->IsFixed() ? spring->GetPointB()->AddForce(-force) : spring->GetPointA()->AddForce(force);
-	}
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
 void Spring::AddForces(bool implicit)
 {
-	if (implicit){
-		//Calculate implicit forces
-		addImplicitForces(this);
+	//The compute of forces is the same in both methods (implicit and symplectic)
+	Vec3 dLdX = (1.0f / length) * (a->GetPosition() - b->GetPosition());
+	Vec3 force = (stiffness * (rest - length)) * dLdX;
+	if (!HalfFixed()){
+		//Both points not fixed
+		a->AddForce(force);
+		b->AddForce(-force);
 	}
 	else{
-		//Calculate symplectic forces
-		addSymplecticForces(this);
+		//Some point fixed
+		a->IsFixed() ? b->AddForce(-force) : a->AddForce(force);
 	}
 }
 
 void Spring::AddToLinearSystem(CGSolver *solver, bool implicit)
 {
+	//Add fixed Matrix to A matrix 
+	//A = M - h^2*K => K=dF/dp
+	if (implicit){
+		//If implicit method we have to compute rigid matrix
+		//Compute dFdP from exercise 2 practice 1a
+		//dFdp = (k*(L0 / L - 1)) * Matrix2::IDENTITY - ((k*L0 / L) * dLdx) * dLdx;
+		Vec3 dLdX = (1.0f / length) * (a->GetPosition() - b->GetPosition());
+		Matrix3 dFdP = (-1.0f) * pow(Scene::step, 2) * (stiffness * (rest / length - 1) * Matrix3::IDENTITY - (((stiffness * rest / length) * dLdX) ^ dLdX));
+		
+		solver->AddToDiagBlock(dFdP, a->GetSimIndex());
+		solver->AddToDiagBlock(dFdP, b->GetSimIndex());
+		solver->AddToSparseBlock(-dFdP, simIndex);
+	}
 }
