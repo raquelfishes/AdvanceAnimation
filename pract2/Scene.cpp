@@ -66,7 +66,7 @@ void Scene::PrintSettings(void)
 void Scene::Init(void)
 {
    //Animation settings
-   constraint=true;
+   constraint=false;
    collisions=true;
    pause=false;
    grabbed=false;

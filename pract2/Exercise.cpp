@@ -31,6 +31,19 @@ public:
 	Vector3 getF2(void) const { return -f; }
 };
 
+Matrix33 fixRotation(const Matrix33 rot){
+	
+	Vector3 alfa = rot.getColumn(0);
+	alfa.normalize();
+
+	Vector3 beta = rot.getColumn(1);
+	beta -= beta.dotProd(beta, alfa)*alfa;
+
+	Vector3 gamma = Vector3::crossProd(alfa, beta);
+
+	return Matrix33(alfa, beta, gamma);
+}
+
 
 void advanceConstraints(vector<RigidBody>& bodies, float step, bool collisions, float floor){
 
@@ -43,6 +56,7 @@ void advanceSprings(vector<RigidBody>& bodies, float step, bool collisions, floa
 	vector<Vector3> F(nbodies), T(nbodies);
 	for (int i = 0; i < nbodies; i++){
 		F[i] = Vector3(0.0f, -bodies[i].Mass()*g, 0.0f);
+		F[i] -= d*bodies[i].Velocity();
 		T[i] = -d*bodies[i].Omega();
 	}
 
@@ -61,9 +75,44 @@ void advanceSprings(vector<RigidBody>& bodies, float step, bool collisions, floa
 		T[i] += Vector3::crossProd(bodies[i].vecLocalToGlobal(axis), sp.getF2());
 	}
 
-	//Collision
+	//Collisions
 	if (collisions){
+		for (int i = 0; i < nbodies; i++){
+			//Check first node of body
+			Vector3 positionA = bodies[i].posLocalToGlobal(axis);
+			if (positionA[1] < floor){
+				//Add force floor
+				Vector3 fFloor = (k*(floor - positionA[1]))*Vector3::UNIT_Y;
+				F[i] += fFloor;
+				T[i] += Vector3::crossProd(bodies[i].vecLocalToGlobal(axis), fFloor);
+			}
+			//Check second node of body
+			Vector3 positionB = bodies[i].posLocalToGlobal(-axis);
+			if (positionB[1] < floor){
+				//Add force floor
+				Vector3 fFloor = (k*(floor - positionB[1]))*Vector3::UNIT_Y;
+				F[i] += fFloor;
+				T[i] += Vector3::crossProd(bodies[i].vecLocalToGlobal(-axis), fFloor);
+			}
+		}
+	}
 
+	//Integrate
+	//velocities
+	for (int i = 0; i < nbodies; i++){
+		// v <- v + dt/m * F
+		bodies[i].SetVelocity(bodies[i].Velocity() + (step / bodies[i].Mass())*F[i]);
+		// w <- w + dt * M^-1 * (T - w x Mw )
+		bodies[i].SetOmega(bodies[i].Omega() + step*bodies[i].InertiaInv()*(T[i] + ((-1.0f)*Vector3::crossProd(bodies[i].Omega(), bodies[i].Inertia()*bodies[i].Omega()))));
+	}
+
+	//positions
+	for (int i = 0; i < nbodies; i++){
+		// x <- x + dt * v
+		bodies[i].SetPosition(bodies[i].Position() + step*bodies[i].Velocity());
+		// R <- R + dt*w*R
+		bodies[i].SetRotation(fixRotation(bodies[i].Rotation() + step*Matrix33::ToCrossProd(bodies[i].Omega())*bodies[i].Rotation()));
+		bodies[i].UpdateInertia();
 	}
 }
 
