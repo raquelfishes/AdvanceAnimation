@@ -17,8 +17,8 @@ Scene::Scene(void)
 Scene::Scene(int argc, char* argv[])
 {
 	// defaults:
-	step = 0.01f;
-   nbodies = 1;
+	step = 0.001f;
+   nbodies = 10;
    floor = -0.5f * nbodies;
 
    int arg=1;
