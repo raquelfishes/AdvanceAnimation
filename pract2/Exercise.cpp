@@ -51,6 +51,7 @@ void advanceSprings(vector<RigidBody>& bodies, float step, bool collisions, floa
 	Spring sp0 (Vector3::ZERO, bodies[0].posLocalToGlobal(axis), k);
 	F[0] += sp0.getF2();
 	T[0] += Vector3::crossProd(bodies[0].vecLocalToGlobal(axis),sp0.getF2());
+
 	//Add spring force for the rest of bodies
 	for (int i = 1; i < nbodies; i++){
 		Spring sp(bodies[i - 1].posLocalToGlobal(-axis), bodies[i].posLocalToGlobal(axis), k);
@@ -60,6 +61,10 @@ void advanceSprings(vector<RigidBody>& bodies, float step, bool collisions, floa
 		T[i] += Vector3::crossProd(bodies[i].vecLocalToGlobal(axis), sp.getF2());
 	}
 
+	//Collision
+	if (collisions){
+
+	}
 }
 
 
