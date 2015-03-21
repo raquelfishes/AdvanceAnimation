@@ -160,25 +160,22 @@ void advanceConstraints(vector<RigidBody>& bodies, float step, bool collisions, 
 
 	//Check collisions
 	vector<ContactConstraint*> contacts;
-	if (collisions)
-	{
-		for (int i = 0; i<nbodies; i++)
-		{
+	if (collisions){
+		for (int i = 0; i<nbodies; i++){
 			Vector3 positionA = bodies[i].posLocalToGlobal(axis);
-			if (positionA[1] < floor)
-			{
+			if (positionA[1] < floor){
 				contacts.push_back(new ContactConstraint(bodies[i], i, axis, floor));
 			}
 			Vector3 positionB = bodies[i].posLocalToGlobal(-axis);
-			if (positionA[1] < floor)
-			{
+			if (positionB[1] < floor){
 				contacts.push_back(new ContactConstraint(bodies[i], i, -axis, floor));
 			}
 		}
 	}
 
 	//Set up constraint system
-	int cSize = 3 + 3 * (int)joints.size() + (int)contacts.size();
+	//
+	int cSize = 3 + 3 * joints.size() + contacts.size();
 	MatrixMN J(cSize, 6 * nbodies);
 	Vector b(cSize);
 

@@ -67,7 +67,7 @@ void Scene::Init(void)
 {
    //Animation settings
    constraint=true;
-   collisions=false;
+   collisions=true;
    pause=false;
    grabbed=false;
    grabProjector=NULL;
