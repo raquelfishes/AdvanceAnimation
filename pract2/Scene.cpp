@@ -18,8 +18,8 @@ Scene::Scene(int argc, char* argv[])
 {
 	// defaults:
 	step = 0.001f;
-   nbodies = 10;
-   floor = -0.5f * nbodies;
+	nbodies = 5;
+	floor = -0.5f * nbodies;
 
    int arg=1;
    while(arg<argc)
@@ -66,8 +66,8 @@ void Scene::PrintSettings(void)
 void Scene::Init(void)
 {
    //Animation settings
-   constraint=false;
-   collisions=true;
+   constraint=true;
+   collisions=false;
    pause=false;
    grabbed=false;
    grabProjector=NULL;
