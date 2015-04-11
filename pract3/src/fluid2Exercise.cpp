@@ -139,6 +139,14 @@ void Fluid2::fluidVolumeForces( const float dt )
 	if( Scene::testcase >= Scene::SMOKE )
 	{
         // gravity
+		const float dtGravity = dt * Scene::kGravity;
+		const Index2 sizeV = velocityY.getSize();
+		for (unsigned int i = 0; i < sizeV.x; ++i){
+			for (unsigned int j = 0; j < sizeV.y; ++j){
+				const Index2 id(i, j);
+				velocityY[id] += dtGravity;
+			}
+		}
 	}
 }
 
