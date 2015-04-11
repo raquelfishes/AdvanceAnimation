@@ -144,17 +144,15 @@ void advanceConstraints(vector<RigidBody>& bodies, float step, bool collisions, 
 	}
 
 	//Compute free velocities
-	for (int i = 0; i<nbodies; i++)
-	{
+	for (int i = 0; i<nbodies; i++){
 		bodies[i].SetVelocity(bodies[i].Velocity() + (step / bodies[i].Mass()) * F[i]);
-		bodies[i].SetOmega(bodies[i].Omega() + step * bodies[i].InertiaInv() * T[i]);
+		bodies[i].SetOmega(bodies[i].Omega() + step * bodies[i].InertiaInv() * (T[i]+((-1.0f)*Vector3::crossProd(bodies[i].Omega(), bodies[i].Inertia()*bodies[i].Omega()))));
 	}
 
 	//Set up joints
 	JointFixedConstraint jointFixed(bodies[0], 0, axis, Vector3::ZERO);
 	vector<JointConstraint*> joints((int)bodies.size() - 1);
-	for (int i = 0; i<nbodies - 1; i++)
-	{
+	for (int i = 0; i<nbodies - 1; i++){
 		joints[i] = new JointConstraint(bodies[i], bodies[i + 1], i, i + 1, -axis, axis);
 	}
 
@@ -174,7 +172,6 @@ void advanceConstraints(vector<RigidBody>& bodies, float step, bool collisions, 
 	}
 
 	//Set up constraint system
-	//
 	int cSize = 3 + 3 * joints.size() + contacts.size();
 	MatrixMN J(cSize, 6 * nbodies);
 	Vector b(cSize);
@@ -185,7 +182,7 @@ void advanceConstraints(vector<RigidBody>& bodies, float step, bool collisions, 
 	b.AddBlock3(0, (-1.0f / step)*jointFixed.GetC() - jointFixed.GetV());
 	
 	//Add J and b for the rest of bodys. JointConstraints
-	for (int i = 0; i<(int)joints.size(); i++){
+	for (int i = 0; i<joints.size(); i++){
 		J.AddBlock33(3 * (i + 1), 6 * joints[i]->GetBodyId1(), joints[i]->GetJv1());
 		J.AddBlock33(3 * (i + 1), 6 * joints[i]->GetBodyId1() + 3, joints[i]->GetJw1());
 		J.AddBlock33(3 * (i + 1), 6 * joints[i]->GetBodyId2(), joints[i]->GetJv2());
@@ -194,7 +191,7 @@ void advanceConstraints(vector<RigidBody>& bodies, float step, bool collisions, 
 	}
 
 	//Add J and b for the collisionConstraint
-	for (int i = 0; i<(int)contacts.size(); i++){
+	for (int i = 0; i<contacts.size(); i++){
 		J.AddBlock13(3 * nbodies + i, 6 * contacts[i]->GetBodyId(), contacts[i]->GetJv());
 		J.AddBlock13(3 * nbodies + i, 6 * contacts[i]->GetBodyId() + 3, contacts[i]->GetJw());
 		b(3 * nbodies + i) += (-1.0f / step)*contacts[i]->GetC() - contacts[i]->GetV();
@@ -202,35 +199,36 @@ void advanceConstraints(vector<RigidBody>& bodies, float step, bool collisions, 
 
 	//Set up inverse of mass matrix
 	MatrixMN Minv(6 * nbodies, 6 * nbodies);
-	for (int i = 0; i<nbodies; i++)
-	{
+	for (int i = 0; i<nbodies; i++){
 		Minv.AddBlock33(6 * i, 6 * i, (1.0f / bodies[i].Mass())*Matrix33::IDENTITY);
 		Minv.AddBlock33(6 * i + 3, 6 * i + 3, bodies[i].InertiaInv());
 	}
 
 	//Set up the matrix A for the system
+	// A = J * M^-1 * J^T
 	MatrixMN A(cSize, cSize);
 	A = J * Minv * J.getTranspose();
 
 	//Solve lagrange multipliers
 	Vector lambda(cSize);
-	if (contacts.size()){
+	if (contacts.size()>0){
+		//If collision, resolve LCP using Projected Gauss-Seidel
 		bool *flags = new bool[cSize];
-		for (int i = 0; i<3 * ((int)joints.size() + 1); i++){
+		for (int i = 0; i<3 * (joints.size() + 1); i++){
 			flags[i] = false;
 		}
-		for (int i = 3 * ((int)joints.size() + 1); i<cSize; i++){
+		for (int i = 3 * (joints.size() + 1); i<cSize; i++){
 			flags[i] = true;
 		}
 		ProjectedGaussSeidel(A, b, lambda, flags);
 		delete flags;
 	}
 	else{
+		//If not collision => linear system
 		GaussElimination(A, b, lambda);
 	}
 
-	//Compute constraint forces (already multiplied by dt)
-	//Loop on the constraints and add forces to the bodies
+	//Compute constraint forces loop on constraints and add forces to the bodies
 	for (int i = 0; i<nbodies; i++){
 		F[i] = Vector3::ZERO;
 		T[i] = Vector3::ZERO;
@@ -262,8 +260,8 @@ void advanceConstraints(vector<RigidBody>& bodies, float step, bool collisions, 
 	}
 
 	//Free memory
-	for (int i = 0; i<(int)joints.size(); i++){	delete joints[i]; }
-	for (int i = 0; i<(int)contacts.size(); i++){ delete contacts[i]; }
+	for (int i = 0; i<joints.size(); i++){	delete joints[i]; }
+	for (int i = 0; i<contacts.size(); i++){ delete contacts[i]; }
 
 }
 
