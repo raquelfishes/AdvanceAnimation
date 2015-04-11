@@ -161,7 +161,8 @@ void Fluid2::fluidViscosity( const float dt )
 		const Index2 sizeU = velocityX.getSize();
 		const Index2 sizeV = velocityY.getSize();
 
-		const Vec2 invDx(1.0f / pow(grid.getCellDx().x, 2), 1.0f / pow(grid.getCellDx().y, 2));
+		const Vec2 dx(grid.getCellDx());
+		const Vec2 invDxPow(1.0f / pow(dx.x, 2), 1.0f / pow(dx.y, 2));
 		const float dtVisDen = dt * Scene::kViscosity / Scene::kDensity;
 
 		for (unsigned int i = 0; i < sizeU.x; ++i){
@@ -173,7 +174,7 @@ void Fluid2::fluidViscosity( const float dt )
 				const Index2 id3(i, clamp(j + 1, 0, sizeU.y - 1));
 				const Index2 id4(i, clamp(j - 1, 0, sizeU.y - 1));
 				/// Compute viscosity in U
-				velocityX[id] = uAux[id] + dtVisDen * ((uAux[id1] - 2 * uAux[id] + uAux[id2])*invDx.x + (uAux[id3] - 2 * uAux[id] + uAux[id4])*invDx.y);
+				velocityX[id] = uAux[id] + dtVisDen * ((uAux[id1] - 2 * uAux[id] + uAux[id2])*invDxPow.x + (uAux[id3] - 2 * uAux[id] + uAux[id4])*invDxPow.y);
 			}
 		}
 
@@ -186,7 +187,7 @@ void Fluid2::fluidViscosity( const float dt )
 				const Index2 id3(i, clamp(j + 1, 0, sizeV.y - 1));
 				const Index2 id4(i, clamp(j - 1, 0, sizeV.y - 1));
 				/// Compute viscosity in V
-				velocityX[id] = vAux[id] + dtVisDen * ((vAux[id1] - 2 * vAux[id] + vAux[id2])*invDx.x + (vAux[id3] - 2 * vAux[id] + vAux[id4])*invDx.y);
+				velocityX[id] = vAux[id] + dtVisDen * ((vAux[id1] - 2 * vAux[id] + vAux[id2])*invDxPow.x + (vAux[id3] - 2 * vAux[id] + vAux[id4])*invDxPow.y);
 			}
 		}
 
@@ -199,5 +200,116 @@ void Fluid2::fluidPressureProjection( const float dt )
 	if( Scene::testcase >= Scene::SMOKE )
 	{
         // pressure
+		const Index2 sizeP = pressure.getSize();
+		const Index2 sizeU = velocityX.getSize();
+		const Index2 sizeV = velocityY.getSize();
+
+		const Vec2 dx(grid.getCellDx());
+		const Vec2 invDx(1.0f / dx.x, 1.0f / dx.y);
+		const Vec2 invDxPow(1.0f / pow(dx.x, 2), 1.0f / pow(dx.y, 2));
+
+		/// wall boundary conditions
+		for (unsigned int j = 0; j < sizeU.y; ++j){
+			/// Left wall as solid
+			velocityX[Index2(0, j)] = 0.0f;
+			/// Right wall as solid
+			velocityX[Index2(sizeU.x - 1, j)] = 0.0f;
+		}
+		for (unsigned int i = 0; i < sizeV.x; ++i){
+			/// Botton as solid
+			velocityY[Index2(i, 0)] = 0.0f;
+			/// TOP as solid
+			//velocityY[ Index2( i, sizev.y-1 ) ] = 0.0f;
+		}
+
+		// b
+		const float pDt = Scene::kDensity / dt;
+		std::vector< double > b(sizeP.x * sizeP.y);
+		for (unsigned int i = 0; i < sizeP.x; ++i){
+			for (unsigned int j = 0; j < sizeP.y; ++j){
+				const Index2 id(i, j);
+				b[pressure.getLinearIndex(i, j)] = -pDt * ((velocityX[Index2(i + 1, j)] - velocityX[id]) * invDx.x + (velocityY[Index2(i, j + 1)] - velocityY[id]) * invDx.y);
+			}
+		}
+
+		// A
+		SparseMatrix< double > A(sizeP.x * sizeP.y, 5);
+		for (unsigned int i = 0; i < sizeP.x; ++i){
+			for (unsigned int j = 0; j < sizeP.y; ++j){
+				const unsigned int id = pressure.getLinearIndex(i, j);
+				if (i > 0) {
+					const unsigned int id1 = pressure.getLinearIndex(i - 1, j);
+					A.add_to_element(id, id, 1. * invDxPow.x);
+					A.add_to_element(id, id1, -1. * invDxPow.x);
+				}
+				if (i < sizeP.x - 1) {
+					const unsigned int id1 = pressure.getLinearIndex(i + 1, j);
+					A.add_to_element(id, id, 1. * invDxPow.x);
+					A.add_to_element(id, id1, -1. * invDxPow.x);
+				}
+				if (j > 0) {
+					const unsigned int id1 = pressure.getLinearIndex(i, j - 1);
+					A.add_to_element(id, id, 1. * invDxPow.y);
+					A.add_to_element(id, id1, -1. * invDxPow.y);
+				}
+				// TOP as air
+				A.add_to_element(id, id, 1. * invDxPow.y);
+				if (j < sizeP.y - 1) {
+					const unsigned int id1 = pressure.getLinearIndex(i, j + 1);
+					A.add_to_element(id, id1, -1. * invDxPow.y);
+				}
+				//// TOP as wall
+				//if( j < size.y-1 ) {
+				//    const unsigned int id1 = pressure.getLinearIndex( i, j+1 );
+				//    A.add_to_element( id, id, 1. * invDxSq.y );
+				//    A.add_to_element( id, id1, -1. * invDxSq.y ); }
+			}
+		}
+
+		// pcg solver
+		PCGSolver< double > solver;
+		
+		double residual_out;
+		int iterations_out;
+		std::vector< double > p(sizeP.x * sizeP.y);
+
+		solver.set_solver_parameters(1e-6, 10000);
+		solver.solve(A, b, p, residual_out, iterations_out);
+
+		std::cout << "Pressure system result: res=" << residual_out << ", iter=" << iterations_out << std::endl;
+
+		// set pressure
+		for (unsigned int i = 0; i < sizeP.x; ++i){
+			for (unsigned int j = 0; j < sizeP.y; ++j){
+				const Index2 id(i, j);
+				pressure[id] = (float)p[pressure.getLinearIndex(i,j)];
+			}
+		}
+
+		// apply pressure gradient
+		const float dtOverRho = dt / Scene::kDensity;
+		for (unsigned int i = 1; i < sizeU.x - 1; ++i){
+			for (unsigned int j = 0; j < sizeU.y; ++j){
+				const Index2 id(i, j);
+				const Index2 id1(i - 1, j);
+				const float gradp = (pressure[id] - pressure[id1]) * invDx.x;
+				velocityX[id] -= dtOverRho * gradp;
+			}
+		}
+		for (unsigned int i = 0; i < sizeV.x; ++i){
+			for (unsigned int j = 1; j < sizeV.y - 1; ++j){
+				const Index2 id(i, j);
+				const Index2 id1(i, j - 1);
+				const float gradp = (pressure[id] - pressure[id1]) * invDx.y;
+				velocityY[id] -= dtOverRho * gradp;
+			}
+		}
+		// apply pressure gradient: TOP as air
+		for (unsigned int i = 0; i < sizeV.x; ++i){
+			const Index2 id(i, sizeV.y - 1);
+			const Index2 id1(i, sizeP.y - 1);
+			const float gradp = (0.0f - pressure[id1]) * invDx.y;
+			velocityY[id] -= dtOverRho * gradp;
+		}
 	}
 }
