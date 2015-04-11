@@ -62,42 +62,42 @@ void Fluid2::fluidAdvection( const float dt )
 	
     // velocity advection
     {
-		Array2< float > vXaux(velocityX);
-		Array2< float > vYaux(velocityY);
-		const Index2 sizeVx = velocityX.getSize();
-		const Index2 sizeVy = velocityY.getSize();
-		for (unsigned int i = 0; i < sizeVx.x; ++i){
-			for (unsigned int j = 0; j < sizeVx.y; ++j){
+		Array2< float > uAux(velocityX);
+		Array2< float > vAux(velocityY);
+		const Index2 sizeU = velocityX.getSize();
+		const Index2 sizeV = velocityY.getSize();
+		for (unsigned int i = 0; i < sizeU.x; ++i){
+			for (unsigned int j = 0; j < sizeU.y; ++j){
 				const Index2 id(i, j);
 				/// Calculate global coordinates VelocityX
 				const Vec2 pos(grid.getFaceXPos(id));
 				/// Calculate index of the previus velocities in X to compute the velocityX
-				const Index2 id1(clamp(i-1, 0, sizeVy.x-1), clamp(j,   0, sizeVy.y-1));
-				const Index2 id2(clamp(i,   0, sizeVy.x-1), clamp(j,   0, sizeVy.y-1));
-				const Index2 id3(clamp(i-1, 0, sizeVy.x-1), clamp(j+1, 0, sizeVy.y-1));
-				const Index2 id4(clamp(i,   0, sizeVy.x-1), clamp(j+1, 0, sizeVy.y-1));
+				const Index2 id1(clamp(i - 1, 0, sizeV.x - 1), clamp(j, 0, sizeV.y - 1));
+				const Index2 id2(clamp(i, 0, sizeV.x - 1), clamp(j, 0, sizeV.y - 1));
+				const Index2 id3(clamp(i - 1, 0, sizeV.x - 1), clamp(j + 1, 0, sizeV.y - 1));
+				const Index2 id4(clamp(i,   0, sizeV.x-1), clamp(j+1, 0, sizeV.y-1));
 				/// Compute advection methond
-				const Vec2 vel(vXaux[id], (vYaux[id1] + vYaux[id2] + vYaux[id3] + vYaux[id4])*0.25f);
+				const Vec2 vel(uAux[id], (vAux[id1] + vAux[id2] + vAux[id3] + vAux[id4])*0.25f);
 				const Vec2 endpos(pos - dt*vel);
 				/// Bilineal interpolation with index, face index in axis 0, horizontal
-				velocityX[id] = bilerp(grid.getFaceIndex(pos, 0),vXaux,vXaux.getSize());
+				velocityX[id] = bilerp(grid.getFaceIndex(pos, 0), uAux, uAux.getSize());
 			}
 		}
-		for (unsigned int i = 0; i < sizeVy.x; ++i){
-			for (unsigned int j = 0; j < sizeVy.y; ++j){
+		for (unsigned int i = 0; i < sizeV.x; ++i){
+			for (unsigned int j = 0; j < sizeV.y; ++j){
 				const Index2 id(i, j);
 				/// Calculate global coordinates VelocityY
 				const Vec2 pos(grid.getFaceYPos(id));
 				/// Calculate index of the previus velocities in X to compute the velocityX
-				const Index2 id1(clamp(i,   0, sizeVx.x - 1), clamp(j-1, 0, sizeVx.y - 1));
-				const Index2 id2(clamp(i,   0, sizeVx.x - 1), clamp(j-1, 0, sizeVx.y - 1));
-				const Index2 id3(clamp(i+1, 0, sizeVx.x - 1), clamp(j,   0, sizeVx.y - 1));
-				const Index2 id4(clamp(i+1, 0, sizeVx.x - 1), clamp(j,   0, sizeVx.y - 1));
+				const Index2 id1(clamp(i, 0, sizeU.x - 1), clamp(j - 1, 0, sizeU.y - 1));
+				const Index2 id2(clamp(i, 0, sizeU.x - 1), clamp(j - 1, 0, sizeU.y - 1));
+				const Index2 id3(clamp(i + 1, 0, sizeU.x - 1), clamp(j, 0, sizeU.y - 1));
+				const Index2 id4(clamp(i + 1, 0, sizeU.x - 1), clamp(j, 0, sizeU.y - 1));
 				/// Compute advection methond
-				const Vec2 vel(vXaux[id], (vYaux[id1] + vYaux[id2] + vYaux[id3] + vYaux[id4])*0.25f);
+				const Vec2 vel((uAux[id1] + uAux[id2] + uAux[id3] + uAux[id4])*0.25f,vAux[id]);
 				const Vec2 endpos(pos - dt*vel);
 				/// Bilineal interpolation with index, face index in axis 0, horizontal
-				velocityY[id] = bilerp(grid.getFaceIndex(pos, 1), vXaux, vXaux.getSize());
+				velocityY[id] = bilerp(grid.getFaceIndex(pos, 1), vAux, vAux.getSize());
 			}
 		}
     }
@@ -148,6 +148,40 @@ void Fluid2::fluidViscosity( const float dt )
 	if( Scene::testcase >= Scene::SMOKE )
 	{
         // viscosity
+		Array2< float > uAux(velocityX);
+		Array2< float > vAux(velocityY);
+		const Index2 sizeU = velocityX.getSize();
+		const Index2 sizeV = velocityY.getSize();
+
+		const Vec2 invDx(1.0f / pow(grid.getCellDx().x, 2), 1.0f / pow(grid.getCellDx().y, 2));
+		const float dtVisDen = dt * Scene::kViscosity / Scene::kDensity;
+
+		for (unsigned int i = 0; i < sizeU.x; ++i){
+			for (unsigned int j = 0; j < sizeU.y; ++j){
+				const Index2 id(i, j);
+				/// Calculate index 
+				const Index2 id1(clamp(i + 1, 0, sizeU.x - 1), j);
+				const Index2 id2(clamp(i - 1, 0, sizeU.x - 1), j);
+				const Index2 id3(i, clamp(j + 1, 0, sizeU.y - 1));
+				const Index2 id4(i, clamp(j - 1, 0, sizeU.y - 1));
+				/// Compute viscosity in U
+				velocityX[id] = uAux[id] + dtVisDen * ((uAux[id1] - 2 * uAux[id] + uAux[id2])*invDx.x + (uAux[id3] - 2 * uAux[id] + uAux[id4])*invDx.y);
+			}
+		}
+
+		for (unsigned int i = 0; i < sizeV.x; ++i){
+			for (unsigned int j = 0; j < sizeV.y; ++j){
+				const Index2 id(i, j);
+				/// Calculate index 
+				const Index2 id1(clamp(i + 1, 0, sizeV.x - 1), j);
+				const Index2 id2(clamp(i - 1, 0, sizeV.x - 1), j);
+				const Index2 id3(i, clamp(j + 1, 0, sizeV.y - 1));
+				const Index2 id4(i, clamp(j - 1, 0, sizeV.y - 1));
+				/// Compute viscosity in V
+				velocityX[id] = vAux[id] + dtVisDen * ((vAux[id1] - 2 * vAux[id] + vAux[id2])*invDx.x + (vAux[id3] - 2 * vAux[id] + vAux[id4])*invDx.y);
+			}
+		}
+
 	}
 }
 
