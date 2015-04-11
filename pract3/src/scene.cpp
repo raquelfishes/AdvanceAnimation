@@ -6,7 +6,8 @@
 
 using namespace std;
 
-int	Scene::testcase			= Scene::TEST_ADVECTION;
+//int Scene::testcase			= Scene::TEST_ADVECTION;
+int	Scene::testcase = Scene::SMOKE;
 bool Scene::pauseFlag		= true;
 unsigned int Scene::nCellsX = 100;
 unsigned int Scene::nCellsY = 100;
