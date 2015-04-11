@@ -109,11 +109,26 @@ void Fluid2::fluidEmission()
 {
 	if( Scene::testcase >= Scene::SMOKE )
 	{
+		Bbox2 source(-0.18f, -1.9f, 0.18f, -1.7f);
+		Vec2 ismin = grid.getCellIndex(source.minPosition);
+		Vec2 ismax = grid.getCellIndex(source.maxPosition);
+		Index2 cornermin((int)floor(ismin.x), (int)floor(ismin.y));
+		Index2 cornermax((int)ceil(ismax.x), (int)ceil(ismax.y));
         // emit source ink
         {
+			for (unsigned int i = cornermin.x; i <= cornermax.x; ++i)
+				for (unsigned int j = cornermin.y; j <= cornermax.y; ++j)
+					ink[Index2(i, j)] = 1.0f;
         }
         // emit source velocity
         {
+			for (unsigned int i = cornermin.x; i <= cornermax.x + 1; ++i)
+				for (unsigned int j = cornermin.y; j <= cornermax.y; ++j)
+					velocityX[Index2(i, j)] = 0.0f;
+
+			for (unsigned int i = cornermin.x; i <= cornermax.x; ++i)
+				for (unsigned int j = cornermin.y; j <= cornermax.y + 1; ++j)
+					velocityY[Index2(i, j)] = 2.0f;
         }
 	}
 }
