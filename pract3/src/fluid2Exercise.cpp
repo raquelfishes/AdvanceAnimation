@@ -93,7 +93,7 @@ void Fluid2::fluidAdvection(const float dt)
 				/// Compute advection methond
 				const Vec2 vel((uAux[id1] + uAux[id2] + uAux[id3] + uAux[id4])*0.25f, vAux[id]);
 				const Vec2 endpos(pos - dt*vel);
-				/// Bilineal interpolation with index, face index in axis 0, horizontal
+				/// Bilineal interpolation with index, face index in axis 1, vertical
 				velocityY[id] = bilerp(grid.getFaceIndex(endpos, 1), vAux, sizeV);
 			}
 		}
@@ -106,18 +106,17 @@ void Fluid2::fluidEmission()
 {
 	if (Scene::testcase >= Scene::SMOKE)
 	{
-		
-		Bbox2 source1(-0.2f, -0.2f, 0.2f, 0.2f);
+		const Bbox2 source1(-0.2f, -0.2f, 0.2f, 0.2f);
 
-		Vec2 minCell1 = grid.getCellIndex(source1.minPosition);
-		Vec2 maxCell1 = grid.getCellIndex(source1.maxPosition);
-		Vec2 difCell1 = (maxCell1 - minCell1) / Vec2(2.0f, 2.0f);
-		Vec2 middleCell1 = difCell1 + minCell1;
+		const Vec2 minCell1 = grid.getCellIndex(source1.minPosition);
+		const Vec2 maxCell1 = grid.getCellIndex(source1.maxPosition);
+		const Vec2 difCell1 = (maxCell1 - minCell1) / Vec2(2.0f, 2.0f);
+		const Vec2 middleCell1 = difCell1 + minCell1;
 
-		Index2 cornerMin1((int)floor(minCell1.x), (int)floor(minCell1.y));
-		Index2 cornerMax1((int)ceil(maxCell1.x), (int)ceil(maxCell1.y));
-		Index2 middleMin1((int)floor(middleCell1.x), (int)floor(middleCell1.y));
-		Index2 middleMax1((int)ceil(middleCell1.x), (int)ceil(middleCell1.y));
+		const Index2 cornerMin1((int)floor(minCell1.x), (int)floor(minCell1.y));
+		const Index2 cornerMax1((int)ceil(maxCell1.x), (int)ceil(maxCell1.y));
+		const Index2 middleMin1((int)floor(middleCell1.x), (int)floor(middleCell1.y));
+		const Index2 middleMax1((int)ceil(middleCell1.x), (int)ceil(middleCell1.y));
 
 		for (unsigned int i = cornerMin1.x; i <= cornerMax1.x; ++i){
 			for (unsigned int j = cornerMin1.y; j <= cornerMax1.y; ++j){
@@ -137,13 +136,13 @@ void Fluid2::fluidEmission()
 			}
 		}
 		if (rand() > RAND_MAX / 3){
-			Bbox2 source2(-0.1f, -1.9f, 0.1f, -1.7f);
+			const Bbox2 source2(-0.1f, -1.9f, 0.1f, -1.7f);
 
-			Vec2 minCell2 = grid.getCellIndex(source2.minPosition);
-			Vec2 maxCell2 = grid.getCellIndex(source2.maxPosition);
+			const Vec2 minCell2 = grid.getCellIndex(source2.minPosition);
+			const Vec2 maxCell2 = grid.getCellIndex(source2.maxPosition);
 
-			Index2 cornerMin2((int)floor(minCell2.x), (int)floor(minCell2.y));
-			Index2 cornerMax2((int)ceil(maxCell2.x), (int)ceil(maxCell2.y));
+			const Index2 cornerMin2((int)floor(minCell2.x), (int)floor(minCell2.y));
+			const Index2 cornerMax2((int)ceil(maxCell2.x), (int)ceil(maxCell2.y));
 
 			for (unsigned int i = cornerMin2.x; i <= cornerMax2.x; ++i){
 				for (unsigned int j = cornerMin2.y; j <= cornerMax2.y; ++j){
@@ -154,13 +153,13 @@ void Fluid2::fluidEmission()
 				}
 			}
 
-			Bbox2 source3(-0.1f, 1.7f, 0.1f, 1.9f);
+			const Bbox2 source3(-0.1f, 1.7f, 0.1f, 1.9f);
 
-			Vec2 minCell3 = grid.getCellIndex(source3.minPosition);
-			Vec2 maxCell3 = grid.getCellIndex(source3.maxPosition);
+			const Vec2 minCell3 = grid.getCellIndex(source3.minPosition);
+			const Vec2 maxCell3 = grid.getCellIndex(source3.maxPosition);
 
-			Index2 cornerMin3((int)floor(minCell3.x), (int)floor(minCell3.y));
-			Index2 cornerMax3((int)ceil(maxCell3.x), (int)ceil(maxCell3.y));
+			const Index2 cornerMin3((int)floor(minCell3.x), (int)floor(minCell3.y));
+			const Index2 cornerMax3((int)ceil(maxCell3.x), (int)ceil(maxCell3.y));
 
 			for (unsigned int i = cornerMin3.x; i <= cornerMax3.x; ++i){
 				for (unsigned int j = cornerMin3.y; j <= cornerMax3.y; ++j){
@@ -262,7 +261,7 @@ void Fluid2::fluidPressureProjection(const float dt)
 			velocityY[Index2(i, 0)] = 0.0f;
 		}
 
-		// b
+		/// b
 		const float pDt = Scene::kDensity / dt;
 		std::vector< double > b(sizeP.x * sizeP.y);
 		for (unsigned int i = 0; i < sizeP.x; ++i){
@@ -272,7 +271,7 @@ void Fluid2::fluidPressureProjection(const float dt)
 			}
 		}
 
-		// A
+		/// A
 		SparseMatrix< double > A(sizeP.x * sizeP.y, 5);
 		for (unsigned int i = 0; i < sizeP.x; ++i){
 			for (unsigned int j = 0; j < sizeP.y; ++j){
