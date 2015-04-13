@@ -2,6 +2,7 @@
 #include "scene.h"
 #include "pcg_solver.h"
 
+
 namespace
 {
 	//////////////////////////////////////////////
@@ -105,26 +106,70 @@ void Fluid2::fluidEmission()
 {
 	if (Scene::testcase >= Scene::SMOKE)
 	{
-		Bbox2 source(-0.18f, -1.9f, 0.18f, -1.7f);
-		Vec2 ismin = grid.getCellIndex(source.minPosition);
-		Vec2 ismax = grid.getCellIndex(source.maxPosition);
-		Index2 cornermin((int)floor(ismin.x), (int)floor(ismin.y));
-		Index2 cornermax((int)ceil(ismax.x), (int)ceil(ismax.y));
-		// emit source ink
-		{
-			for (unsigned int i = cornermin.x; i <= cornermax.x; ++i)
-				for (unsigned int j = cornermin.y; j <= cornermax.y; ++j)
-					ink[Index2(i, j)] = 1.0f;
-		}
-		// emit source velocity
-		{
-			for (unsigned int i = cornermin.x; i <= cornermax.x + 1; ++i)
-				for (unsigned int j = cornermin.y; j <= cornermax.y; ++j)
-					velocityX[Index2(i, j)] = 0.0f;
+		
+		Bbox2 source1(-0.2f, -0.2f, 0.2f, 0.2f);
 
-			for (unsigned int i = cornermin.x; i <= cornermax.x; ++i)
-				for (unsigned int j = cornermin.y; j <= cornermax.y + 1; ++j)
-					velocityY[Index2(i, j)] = 8.0f;
+		Vec2 minCell1 = grid.getCellIndex(source1.minPosition);
+		Vec2 maxCell1 = grid.getCellIndex(source1.maxPosition);
+		Vec2 difCell1 = (maxCell1 - minCell1) / Vec2(2.0f, 2.0f);
+		Vec2 middleCell1 = difCell1 + minCell1;
+
+		Index2 cornerMin1((int)floor(minCell1.x), (int)floor(minCell1.y));
+		Index2 cornerMax1((int)ceil(maxCell1.x), (int)ceil(maxCell1.y));
+		Index2 middleMin1((int)floor(middleCell1.x), (int)floor(middleCell1.y));
+		Index2 middleMax1((int)ceil(middleCell1.x), (int)ceil(middleCell1.y));
+
+		for (unsigned int i = cornerMin1.x; i <= cornerMax1.x; ++i){
+			for (unsigned int j = cornerMin1.y; j <= cornerMax1.y; ++j){
+				const Index2 id(i, j);
+				if (j > cornerMin1.y && j < cornerMax1.y){
+					if (i < middleMin1.x){
+						ink[id] = 1.0f;
+						velocityX[id] = -5.0f;
+						velocityY[id] = 0.0f;
+					}
+					if (i > middleMax1.x){
+						ink[id] = 1.0f;
+						velocityX[id] = 5.0f;
+						velocityY[id] = 0.0f;
+					}
+				}
+			}
+		}
+		if (rand() > RAND_MAX / 3){
+			Bbox2 source2(-0.1f, -1.9f, 0.1f, -1.7f);
+
+			Vec2 minCell2 = grid.getCellIndex(source2.minPosition);
+			Vec2 maxCell2 = grid.getCellIndex(source2.maxPosition);
+
+			Index2 cornerMin2((int)floor(minCell2.x), (int)floor(minCell2.y));
+			Index2 cornerMax2((int)ceil(maxCell2.x), (int)ceil(maxCell2.y));
+
+			for (unsigned int i = cornerMin2.x; i <= cornerMax2.x; ++i){
+				for (unsigned int j = cornerMin2.y; j <= cornerMax2.y; ++j){
+					const Index2 id(i, j);
+					ink[id] = 1.0f;
+					velocityX[id] = 0.0f;
+					velocityY[id] = 10.0f;
+				}
+			}
+
+			Bbox2 source3(-0.1f, 1.7f, 0.1f, 1.9f);
+
+			Vec2 minCell3 = grid.getCellIndex(source3.minPosition);
+			Vec2 maxCell3 = grid.getCellIndex(source3.maxPosition);
+
+			Index2 cornerMin3((int)floor(minCell3.x), (int)floor(minCell3.y));
+			Index2 cornerMax3((int)ceil(maxCell3.x), (int)ceil(maxCell3.y));
+
+			for (unsigned int i = cornerMin3.x; i <= cornerMax3.x; ++i){
+				for (unsigned int j = cornerMin3.y; j <= cornerMax3.y; ++j){
+					const Index2 id(i, j);
+					ink[id] = 1.0f;
+					velocityX[id] = 0.0f;
+					velocityY[id] = -10.0f;
+				}
+			}
 		}
 	}
 }
@@ -215,8 +260,6 @@ void Fluid2::fluidPressureProjection(const float dt)
 		for (unsigned int i = 0; i < sizeV.x; ++i){
 			/// Botton as solid
 			velocityY[Index2(i, 0)] = 0.0f;
-			/// TOP as solid
-			//velocityY[ Index2( i, sizev.y-1 ) ] = 0.0f;
 		}
 
 		// b
@@ -249,17 +292,12 @@ void Fluid2::fluidPressureProjection(const float dt)
 					A.add_to_element(id, id, 1. * invDxPow.y);
 					A.add_to_element(id, id1, -1. * invDxPow.y);
 				}
-				// TOP as air
+				/// TOP as air
 				A.add_to_element(id, id, 1. * invDxPow.y);
 				if (j < sizeP.y - 1) {
 					const unsigned int id1 = pressure.getLinearIndex(i, j + 1);
 					A.add_to_element(id, id1, -1. * invDxPow.y);
 				}
-				//// TOP as wall
-				//if( j < size.y-1 ) {
-				//    const unsigned int id1 = pressure.getLinearIndex( i, j+1 );
-				//    A.add_to_element( id, id, 1. * invDxSq.y );
-				//    A.add_to_element( id, id1, -1. * invDxSq.y ); }
 			}
 		}
 
@@ -310,113 +348,3 @@ void Fluid2::fluidPressureProjection(const float dt)
 		}
 	}
 }
-
-/*
-// pressure
-void Fluid2::fluidPressureProjection( const float dt )
-{
-	if( Scene::testcase >= Scene::SMOKE )
-	{
-        const Vec2 dx = grid.getCellDx();
-        const Vec2 invDx( 1.0f / dx.x, 1.0f / dx.y );
-        const Vec2 invDxSq( 1.0f / ( dx.x * dx.x ), 1.0f / ( dx.y * dx.y ) );
-        
-        const Index2& size = pressure.getSize();
-        const Index2& sizeu = velocityX.getSize();
-        const Index2& sizev = velocityY.getSize();
-
-        // wall boundary conditions
-        for( unsigned int j = 0; j < sizeu.y; ++j )
-        {
-            velocityX[ Index2( 0, j ) ] = 0.0f;
-            velocityX[ Index2( sizeu.x-1, j ) ] = 0.0f;
-        }
-        for( unsigned int i = 0; i < sizev.x; ++i )
-        {
-            velocityY[ Index2( i, 0 ) ] = 0.0f;
-            // TOP as solid
-            //velocityY[ Index2( i, sizev.y-1 ) ] = 0.0f;
-        }
-        
-        // rhs
-        const float rhoOverDt = Scene::kDensity / dt;
-        std::vector< double > rhs( size.x * size.y );
-		for( unsigned int i = 0; i < size.x; ++i )
-		for( unsigned int j = 0; j < size.y; ++j )
-        {
-            const Index2 id( i, j );
-            rhs[ pressure.getLinearIndex( i, j ) ] = - rhoOverDt * 
-                ( ( velocityX[ Index2( i+1, j ) ] - velocityX[ id ] ) * invDx.x + 
-                  ( velocityY[ Index2( i, j+1 ) ] - velocityY[ id ] ) * invDx.y );
-        }
-        
-        // A
-        SparseMatrix< double > A( size.x * size.y, 5 );
-        for( unsigned int i = 0; i < size.x; ++i )
-		for( unsigned int j = 0; j < size.y; ++j )
-        {
-            const unsigned int id = pressure.getLinearIndex( i, j );
-            if( i > 0 ) {
-                const unsigned int id1 = pressure.getLinearIndex( i-1, j );
-                A.add_to_element( id, id, 1. * invDxSq.x );
-                A.add_to_element( id, id1, -1. * invDxSq.x ); }
-            if( i < size.x-1 ) {
-                const unsigned int id1 = pressure.getLinearIndex( i+1, j );
-                A.add_to_element( id, id, 1. * invDxSq.x );
-                A.add_to_element( id, id1, -1. * invDxSq.x ); }
-            if( j > 0 ) {
-                const unsigned int id1 = pressure.getLinearIndex( i, j-1 );
-                A.add_to_element( id, id, 1. * invDxSq.y );
-                A.add_to_element( id, id1, -1. * invDxSq.y ); }
-            // TOP as air
-            A.add_to_element( id, id, 1. * invDxSq.y );
-            if( j < size.y-1 ) {
-                const unsigned int id1 = pressure.getLinearIndex( i, j+1 );
-                A.add_to_element( id, id1, -1. * invDxSq.y ); }
-            //// TOP as wall
-            //if( j < size.y-1 ) {
-            //    const unsigned int id1 = pressure.getLinearIndex( i, j+1 );
-            //    A.add_to_element( id, id, 1. * invDxSq.y );
-            //    A.add_to_element( id, id1, -1. * invDxSq.y ); }
-        }
-        
-        // pcg solver
-        PCGSolver< double > solver;
-        solver.set_solver_parameters( 1e-6, 10000 );
-        
-        double residual_out;
-        int iterations_out;
-        std::vector< double > p( size.x * size.y );
-        solver.solve( A, rhs, p, residual_out, iterations_out );
-        std::cout << "Pressure system result: res=" << residual_out << ", iter=" << iterations_out << std::endl;
-
-        // set pressure
-        for( unsigned int i = 0, n = size.x * size.y; i < n; ++i )
-            pressure[ i ] = (float) p[ i ];
-
-        // apply pressure gradient
-        const float dtOverRho = dt / Scene::kDensity;
-		for( unsigned int i = 1; i < sizeu.x - 1; ++i )
-		for( unsigned int j = 0; j < sizeu.y; ++j )
-        {
-            const Index2 id( i, j );
-            const float gradp = ( pressure[ id ] - pressure[ Index2( i-1, j ) ] ) * invDx.x;
-            velocityX[ id ] -= dtOverRho * gradp;
-        }
-		for( unsigned int i = 0; i < sizev.x; ++i )
-		for( unsigned int j = 1; j < sizev.y - 1; ++j )
-        {
-            const Index2 id( i, j );
-            const float gradp = ( pressure[ id ] - pressure[ Index2( i, j-1 ) ] ) * invDx.y;
-            velocityY[ id ] -= dtOverRho * gradp;
-        }
-        // apply pressure gradient: TOP as air
-        for( unsigned int i = 0; i < sizev.x; ++i )
-        {
-            const Index2 id( i, sizev.y-1 );
-            const float gradp = ( 0.0f - pressure[ Index2( i, size.y-1 ) ] ) * invDx.y;
-            velocityY[ id ] -= dtOverRho * gradp;
-        }
-	}
-}
-*/
