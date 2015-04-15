@@ -34,6 +34,9 @@ namespace
 		const float y2 = (1.0f - t.x) * field[id3] + t.x * field[id4];
 		return (1 - t.y) * y1 + t.y * y2;
 	}
+
+	/// Variable to control the emission
+	int count = 0;
 }
 
 // advection
@@ -135,7 +138,8 @@ void Fluid2::fluidEmission()
 				}
 			}
 		}
-		if (rand() > RAND_MAX / 3){
+		/// Control de emission
+		if (count++ % 20 <13){
 			const Bbox2 source2(-0.1f, -1.9f, 0.1f, -1.7f);
 
 			const Vec2 minCell2 = grid.getCellIndex(source2.minPosition);
@@ -259,6 +263,8 @@ void Fluid2::fluidPressureProjection(const float dt)
 		for (unsigned int i = 0; i < sizeV.x; ++i){
 			/// Botton as solid
 			velocityY[Index2(i, 0)] = 0.0f;
+			/// Top as solid
+			velocityY[Index2(i, sizeV.y-1)] = 0.0f;
 		}
 
 		/// b
@@ -291,10 +297,15 @@ void Fluid2::fluidPressureProjection(const float dt)
 					A.add_to_element(id, id, 1. * invDxPow.y);
 					A.add_to_element(id, id1, -1. * invDxPow.y);
 				}
-				/// TOP as air
 				A.add_to_element(id, id, 1. * invDxPow.y);
+				/// Top as air
+				//if (j < sizeP.y - 1) {
+				//	const unsigned int id1 = pressure.getLinearIndex(i, j + 1);
+				//	A.add_to_element(id, id1, -1. * invDxPow.y);
+				//}
+				/// Top as solid
 				if (j < sizeP.y - 1) {
-					const unsigned int id1 = pressure.getLinearIndex(i, j + 1);
+					const unsigned int id1 = pressure.getLinearIndex( i, j+1 );
 					A.add_to_element(id, id1, -1. * invDxPow.y);
 				}
 			}
