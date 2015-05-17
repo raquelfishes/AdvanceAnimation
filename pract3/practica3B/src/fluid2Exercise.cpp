@@ -121,6 +121,13 @@ void Fluid2::fluidAdvection( const float dt )
     if( flipEnabled )
     {
         // move particles with RK2 with grid velocities
+		for (unsigned int i = 0; i < particles.getSize(); ++i){
+			/// foreach particle search the index cell
+			const Vec2& cell = grid.getCellIndex(particles.getPosition(i));
+			const Index2 id((int)floor(cell.x), (int)floor(cell.y));
+			Vec2 pos = particles.getPosition(i) + (dt / 2);
+
+		}
 
         // ensure particle remains inside the domain
 
@@ -204,6 +211,9 @@ void Fluid2::fluidEmission( void )
     if( flipEnabled )
 	{
         // modify particles properties if inside the domain
+		for (unsigned int i = 0; i < particles.getSize(); ++i){
+
+		}
 
     }
     else
