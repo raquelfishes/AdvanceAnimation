@@ -8,6 +8,12 @@ namespace
     {
         return x < a ? a : ( x > b ? b : x );
     }
+
+	inline float getRandom(const float value1, const float value2){
+		const float aux = (float) rand() / (float) RAND_MAX;
+		const float dif = fabs(value1 - value2);
+		return (aux * dif) + fmin(value1, value2);
+	}
     
 	struct BaseSampler
 	{
@@ -81,10 +87,32 @@ namespace
 }
 
 // init particles
-void Fluid2::initParticles( void )
+void Fluid2::initParticles(void)
 {
-    // particle sampling on the entire domain
-
+	// particle sampling on the entire domain
+	// Get size of grid
+	const Index2& size = grid.getSize();
+	// Get dx and dy which is the dif between the center and the border of the cell
+	const float dx = (grid.getDomain().maxPosition.x - grid.getDomain().minPosition.x) / (size.x*2);
+	const float dy = (grid.getDomain().maxPosition.y - grid.getDomain().minPosition.y) / (size.y*2);
+	for (unsigned int i = 0; i < size.x; ++i){
+		for (unsigned int j = 0; j < size.y; ++j)
+		{
+			// For each cell get index and position
+			const Index2 id(i, j);
+			const Vec2 posCenter(grid.getCellPos(id));
+			// Divide the cell in four, and get random position for each partition
+			const Vec2 pos1(getRandom(posCenter.x - dx, posCenter.x), getRandom(posCenter.y - dy, posCenter.y));
+			const Vec2 pos2(getRandom(posCenter.x + dx, posCenter.x), getRandom(posCenter.y - dy, posCenter.y));
+			const Vec2 pos3(getRandom(posCenter.x - dx, posCenter.x), getRandom(posCenter.y + dy, posCenter.y));
+			const Vec2 pos4(getRandom(posCenter.x + dx, posCenter.x), getRandom(posCenter.y + dy, posCenter.y));
+			// Add a particle in all the partitions by cell
+			particles.addParticle(pos1);
+			particles.addParticle(pos2);
+			particles.addParticle(pos3);
+			particles.addParticle(pos4);
+		}
+	}
 }
 
 // advection
