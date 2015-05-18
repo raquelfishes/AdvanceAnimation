@@ -125,7 +125,9 @@ void Fluid2::fluidAdvection( const float dt )
 			/// foreach particle search the index cell
 			const Vec2& cell = grid.getCellIndex(particles.getPosition(i));
 			const Index2 id((int)floor(cell.x), (int)floor(cell.y));
-			Vec2 pos = particles.getPosition(i) + (dt / 2);
+			const Vec2 vel((velocityX[id] + velocityX[Index2(id.x + 1, id.y)]) * 0.5f, (velocityY[id] + velocityY[Index2(id.x, id.y + 1)]) * 0.5f);
+			Vec2 pos = particles.getPosition(i) + (dt / 2)*vel;
+			//Vec2 posFinal = particles.getPosition(i) + dt * 
 
 		}
 
