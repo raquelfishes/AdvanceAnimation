@@ -169,12 +169,12 @@ void Fluid2::fluidAdvection( const float dt )
 {
     if( flipEnabled )
     {
-		Array2< float > inkAux(ink);
-		Array2< float > uAux(velocityX);
-		Array2< float > vAux(velocityY);
-		const Index2 sizeInk = ink.getSize();
-		const Index2 sizeU = velocityX.getSize();
-		const Index2 sizeV = velocityY.getSize();
+		//Array2< float > inkAux(ink);
+		//Array2< float > uAux(velocityX);
+		//Array2< float > vAux(velocityY);
+		//const Index2 sizeInk = ink.getSize();
+		//const Index2 sizeU = velocityX.getSize();
+		//const Index2 sizeV = velocityY.getSize();
 
         // move particles with RK2 with grid velocities
 		for (unsigned int i = 0; i < particles.getSize(); ++i){
@@ -183,19 +183,19 @@ void Fluid2::fluidAdvection( const float dt )
 			Vec2 auxVel;
 			float auxInk;
 			// first stage of Runge-Kutta 2 (do a half Euler step)
-			auxVel.x = bilerp(grid.getFaceIndex(posParticle, 0), uAux, sizeU);
-			auxVel.y = bilerp(grid.getFaceIndex(posParticle, 1), vAux, sizeV);
+			auxVel.x = bilerp(grid.getFaceIndex(posParticle, 0), velocityX, velocityX.getSize());
+			auxVel.y = bilerp(grid.getFaceIndex(posParticle, 1), velocityY, velocityY.getSize());
 			//auxInk = bilerp(grid.getCellIndex(posParticle), inkAux, sizeInk);
 			const Vec2 midPos = posParticle + 0.5*dt*auxVel;
 			//const float midInk = posParticle + 0.5*dt*auxVel;
 			// second stage of Runge-Kutta 2
-			auxVel.x = bilerp(grid.getFaceIndex(midPos, 0), uAux, sizeU);
-			auxVel.y = bilerp(grid.getFaceIndex(midPos, 1), vAux, sizeV);
+			auxVel.x = bilerp(grid.getFaceIndex(midPos, 0), velocityX, velocityX.getSize());
+			auxVel.y = bilerp(grid.getFaceIndex(midPos, 1), velocityY, velocityY.getSize());
 			const Vec2 posFinal = posParticle + dt*auxVel;
 
 			particles.setPosition(i, posFinal);
 
-			particles.setInk(i, bilerp(grid.getCellIndex(posFinal), inkAux, sizeInk));
+			particles.setInk(i, bilerp(grid.getCellIndex(posFinal), ink, ink.getSize()));
 		}
 
         // ensure particle remains inside the domain
@@ -203,10 +203,8 @@ void Fluid2::fluidAdvection( const float dt )
 			particles.setPosition(i, clamp(particles.getPosition(i), grid.getDomain().minPosition, grid.getDomain().maxPosition));
 		}
 
-		Array2 <float> weights;
-
         // create ink grid from particles
-		//weights.resize(sizeInk);
+		Array2 <float> weights(grid.getSize().x + 1, grid.getSize().y+1);
 		weights.clear();
 		ink.clear();
 		for (unsigned int i = 0; i < particles.getSize(); ++i){
@@ -214,7 +212,7 @@ void Fluid2::fluidAdvection( const float dt )
 			const Vec2 inkVal = grid.getCellIndex(posParticle);
 			const Vec2 inkPos = grid.getFaceXPos(Index2((int)inkVal.x, (int)inkVal.y));
 			//Assign weights for each node
-			accumulateCell(velocityX, weights, uAux.getValue(Index2((int)inkVal.x, (int)inkVal.y)), (int)inkVal.x, (int)inkVal.y, inkPos.x, inkPos.y);
+			accumulateCell(velocityX, weights, ink.getValue(Index2((int)inkVal.x, (int)inkVal.y)), (int)inkVal.x, (int)inkVal.y, inkPos.x, inkPos.y);
 		}
 		for (unsigned int j = 0; j<ink.getSize().y; ++j){
 			for (unsigned int i = 0; i < ink.getSize().x; ++i){
@@ -225,15 +223,15 @@ void Fluid2::fluidAdvection( const float dt )
 		}
 
         // create velocityX grid from particles
+		//Array2 <float> weightsVelocityX(grid.getSizeFaces(0));
 		weights.clear();
-		//weights.resize(sizeU);
 		velocityX.clear();
 		for (unsigned int i = 0; i < particles.getSize(); ++i){
 			const Vec2& posParticle = particles.getPosition(i);
 			const Vec2 uVel = grid.getFaceIndex(posParticle, 0);
 			const Vec2 xPos = grid.getFaceXPos(Index2((int)uVel.x, (int)uVel.y));
 			//Assign weights for each node
-			accumulateCell(velocityX, weights, uAux.getValue(Index2((int)uVel.x, (int)uVel.y)), (int)uVel.x, (int)uVel.y, xPos.x, xPos.y);
+			accumulateCell(velocityX, weights, velocityX.getValue(Index2((int)uVel.x, (int)uVel.y)), (int)uVel.x, (int)uVel.y, xPos.x, xPos.y);
 		}
 		for (unsigned int j = 0; j<velocityX.getSize().y; ++j){
 			for (unsigned int i = 0; i < velocityX.getSize().x; ++i){
@@ -245,15 +243,15 @@ void Fluid2::fluidAdvection( const float dt )
 		
 
         // create velocityY grid from particles
+		//Array2 <float> weightsVelocityY(grid.getSizeFaces(1));
 		weights.clear();
-		//weights.resize(sizeV);
 		velocityY.clear();
 		for (unsigned int i = 0; i < particles.getSize(); ++i){
 			const Vec2& posParticle = particles.getPosition(i);
 			const Vec2 vVel = grid.getFaceIndex(posParticle, 1);
 			const Vec2 yPos = grid.getFaceXPos(Index2((int)vVel.x, (int)vVel.y));
 			//Assign weights for each node
-			accumulateCell(velocityY, weights, uAux.getValue(Index2((int)vVel.x, (int)vVel.y)), (int)vVel.x, (int)vVel.y, yPos.x, yPos.y);
+			accumulateCell(velocityY, weights, velocityY.getValue(Index2((int)vVel.x, (int)vVel.y)), (int)vVel.x, (int)vVel.y, yPos.x, yPos.y);
 		}
 		for (unsigned int j = 0; j<velocityY.getSize().y; ++j){
 			for (unsigned int i = 0; i < velocityY.getSize().x; ++i){
@@ -489,7 +487,7 @@ void Fluid2::fluidPressureProjection( const float dt )
 
     // pcg solver
     PCGSolver< double > solver;
-    solver.set_solver_parameters( 1e-6, 10000 );
+    solver.set_solver_parameters( 1e-6, 1000 );
         
     double residual_out;
     int iterations_out;
