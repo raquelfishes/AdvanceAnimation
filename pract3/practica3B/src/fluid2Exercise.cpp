@@ -9,10 +9,38 @@ namespace
         return x < a ? a : ( x > b ? b : x );
     }
 
+	inline Vec2 clamp(Vec2 x, Vec2 a, Vec2 b){
+		float aux1 = x.x < a.x ? a.x : (x.x > b.x ? b.x : x.x);
+		float aux2 = x.y < a.y ? a.y : (x.y > b.y ? b.y : x.y);
+		return Vec2(aux1,aux2);
+	}
+
 	inline float getRandom(const float value1, const float value2){
 		const float aux = (float) rand() / (float) RAND_MAX;
 		const float dif = fabs(value1 - value2);
 		return (aux * dif) + fmin(value1, value2);
+	}
+
+	inline float bilerp(const Vec2 pos, Array2<float>& field, const Index2 size){
+		const Vec2 posMin(floorf(pos.x), floorf(pos.y));
+		const Vec2 posMax(ceilf(pos.x), ceilf(pos.y));
+		const Vec2 t(pos - posMin);
+
+		const Index2 id1(clamp((int)posMin.x, 0, size.x - 1), clamp((int)posMin.y, 0, size.y - 1));
+		const Index2 id2(clamp((int)posMax.x, 0, size.x - 1), clamp((int)posMin.y, 0, size.y - 1));
+		const Index2 id3(clamp((int)posMin.x, 0, size.x - 1), clamp((int)posMax.y, 0, size.y - 1));
+		const Index2 id4(clamp((int)posMax.x, 0, size.x - 1), clamp((int)posMax.y, 0, size.y - 1));
+
+		///// Bilinear interpolation - General case
+		/// alfa = x - i
+		/// beta = y - j
+		/// U_alfa_j =  (1 - alfa) * u_ij + alfa * u_i+1j
+		/// U_alfa_j+1 = (1 - alfa) * u_ij+1 + alfa * u_i+1j+1
+		/// I = (1 - beta)u_alfa_j + beta * u_alfa_j+1
+
+		const float y1 = (1.0f - t.x) * field[id1] + t.x * field[id2];
+		const float y2 = (1.0f - t.x) * field[id3] + t.x * field[id4];
+		return (1 - t.y) * y1 + t.y * y2;
 	}
     
 	struct BaseSampler
@@ -83,6 +111,27 @@ namespace
 	//////////////////////////////////////////////
 	// Add any custom classes or functions here //
 	//////////////////////////////////////////////
+
+	void accumulateCell(Array2<float>& vect, Array2<float>& sum, float val, int i, int j, float fx, float fy){
+		
+		float weight;
+
+		weight = (1 - fx)*(1 - fy);
+		vect.setValue(Index2(i, j), vect.getValue(Index2(i, j)) + weight*val);
+		sum.setValue(Index2(i, j), sum.getValue(Index2(i, j)) + weight);
+
+		weight = fx*(1 - fy);
+		vect.setValue(Index2(i + 1, j), vect.getValue(Index2(i + 1, j)) + weight*val);
+		sum.setValue(Index2(i + 1, j), sum.getValue(Index2(i + 1, j)) + weight);
+
+		weight = (1 - fx)*fy;
+		vect.setValue(Index2(i, j + 1), vect.getValue(Index2(i, j + 1)) + weight*val);
+		sum.setValue(Index2(i, j + 1), sum.getValue(Index2(i, j + 1)) + weight);
+
+		weight = fx*fy;
+		vect.setValue(Index2(i + 1, j + 1), vect.getValue(Index2(i + 1, j + 1)) + weight*val);
+		sum.setValue(Index2(i + 1, j + 1), sum.getValue(Index2(i + 1, j + 1)) + weight);
+	}
     
 }
 
@@ -93,8 +142,8 @@ void Fluid2::initParticles(void)
 	// Get size of grid
 	const Index2& size = grid.getSize();
 	// Get dx and dy which is the dif between the center and the border of the cell
-	const float dx = (grid.getDomain().maxPosition.x - grid.getDomain().minPosition.x) / (size.x*2);
-	const float dy = (grid.getDomain().maxPosition.y - grid.getDomain().minPosition.y) / (size.y*2);
+	const float dx = grid.getCellDx().x*0.5;/* (grid.getDomain().maxPosition.x - grid.getDomain().minPosition.x) / (size.x * 2);*/
+	const float dy = grid.getCellDx().y*0.5;/* (grid.getDomain().maxPosition.y - grid.getDomain().minPosition.y) / (size.y * 2);*/
 	for (unsigned int i = 0; i < size.x; ++i){
 		for (unsigned int j = 0; j < size.y; ++j)
 		{
@@ -120,88 +169,166 @@ void Fluid2::fluidAdvection( const float dt )
 {
     if( flipEnabled )
     {
+		Array2< float > inkAux(ink);
+		Array2< float > uAux(velocityX);
+		Array2< float > vAux(velocityY);
+		const Index2 sizeInk = ink.getSize();
+		const Index2 sizeU = velocityX.getSize();
+		const Index2 sizeV = velocityY.getSize();
+
         // move particles with RK2 with grid velocities
 		for (unsigned int i = 0; i < particles.getSize(); ++i){
 			/// foreach particle search the index cell
-			const Vec2& cell = grid.getCellIndex(particles.getPosition(i));
-			const Index2 id((int)floor(cell.x), (int)floor(cell.y));
-			const Vec2 vel((velocityX[id] + velocityX[Index2(id.x + 1, id.y)]) * 0.5f, (velocityY[id] + velocityY[Index2(id.x, id.y + 1)]) * 0.5f);
-			Vec2 pos = particles.getPosition(i) + (dt / 2)*vel;
-			//Vec2 posFinal = particles.getPosition(i) + dt * 
+			const Vec2& posParticle = particles.getPosition(i);
+			Vec2 auxVel;
+			float auxInk;
+			// first stage of Runge-Kutta 2 (do a half Euler step)
+			auxVel.x = bilerp(grid.getFaceIndex(posParticle, 0), uAux, sizeU);
+			auxVel.y = bilerp(grid.getFaceIndex(posParticle, 1), vAux, sizeV);
+			//auxInk = bilerp(grid.getCellIndex(posParticle), inkAux, sizeInk);
+			const Vec2 midPos = posParticle + 0.5*dt*auxVel;
+			//const float midInk = posParticle + 0.5*dt*auxVel;
+			// second stage of Runge-Kutta 2
+			auxVel.x = bilerp(grid.getFaceIndex(midPos, 0), uAux, sizeU);
+			auxVel.y = bilerp(grid.getFaceIndex(midPos, 1), vAux, sizeV);
+			const Vec2 posFinal = posParticle + dt*auxVel;
 
+			particles.setPosition(i, posFinal);
+
+			particles.setInk(i, bilerp(grid.getCellIndex(posFinal), inkAux, sizeInk));
 		}
 
         // ensure particle remains inside the domain
+		for (unsigned int i = 0; i < particles.getSize(); ++i){
+			particles.setPosition(i, clamp(particles.getPosition(i), grid.getDomain().minPosition, grid.getDomain().maxPosition));
+		}
+
+		Array2 <float> weights;
 
         // create ink grid from particles
+		//weights.resize(sizeInk);
+		weights.clear();
+		ink.clear();
+		for (unsigned int i = 0; i < particles.getSize(); ++i){
+			const Vec2& posParticle = particles.getPosition(i);
+			const Vec2 inkVal = grid.getCellIndex(posParticle);
+			const Vec2 inkPos = grid.getFaceXPos(Index2((int)inkVal.x, (int)inkVal.y));
+			//Assign weights for each node
+			accumulateCell(velocityX, weights, uAux.getValue(Index2((int)inkVal.x, (int)inkVal.y)), (int)inkVal.x, (int)inkVal.y, inkPos.x, inkPos.y);
+		}
+		for (unsigned int j = 0; j<ink.getSize().y; ++j){
+			for (unsigned int i = 0; i < ink.getSize().x; ++i){
+				const Index2 id = Index2(i, j);
+				if (weights.getValue(id) != 0)
+					ink.setValue(id, ink.getValue(id) / weights.getValue(id));
+			}
+		}
 
         // create velocityX grid from particles
+		weights.clear();
+		//weights.resize(sizeU);
+		velocityX.clear();
+		for (unsigned int i = 0; i < particles.getSize(); ++i){
+			const Vec2& posParticle = particles.getPosition(i);
+			const Vec2 uVel = grid.getFaceIndex(posParticle, 0);
+			const Vec2 xPos = grid.getFaceXPos(Index2((int)uVel.x, (int)uVel.y));
+			//Assign weights for each node
+			accumulateCell(velocityX, weights, uAux.getValue(Index2((int)uVel.x, (int)uVel.y)), (int)uVel.x, (int)uVel.y, xPos.x, xPos.y);
+		}
+		for (unsigned int j = 0; j<velocityX.getSize().y; ++j){
+			for (unsigned int i = 0; i < velocityX.getSize().x; ++i){
+				const Index2 id = Index2(i, j);
+				if (weights.getValue(id) != 0)
+					velocityX.setValue(id, velocityX.getValue(id) / weights.getValue(id));
+			}
+		}
+		
 
         // create velocityY grid from particles
+		weights.clear();
+		//weights.resize(sizeV);
+		velocityY.clear();
+		for (unsigned int i = 0; i < particles.getSize(); ++i){
+			const Vec2& posParticle = particles.getPosition(i);
+			const Vec2 vVel = grid.getFaceIndex(posParticle, 1);
+			const Vec2 yPos = grid.getFaceXPos(Index2((int)vVel.x, (int)vVel.y));
+			//Assign weights for each node
+			accumulateCell(velocityY, weights, uAux.getValue(Index2((int)vVel.x, (int)vVel.y)), (int)vVel.x, (int)vVel.y, yPos.x, yPos.y);
+		}
+		for (unsigned int j = 0; j<velocityY.getSize().y; ++j){
+			for (unsigned int i = 0; i < velocityY.getSize().x; ++i){
+				const Index2 id = Index2(i, j);
+				if (weights.getValue(id) != 0)
+					velocityY.setValue(id, velocityY.getValue(id) / weights.getValue(id));
+			}
+		}
 
         // save current state velocities
-
+		oldVelocityX.copy(velocityX);
+		oldVelocityY.copy(velocityY);
     }
-    else
-    {
-        // ink
-	    Array2<float> inkcopy( ink );
-	    CellSampler inksampler( grid, inkcopy );
+	else
+	{
+		// ink advection
+		{
+			Array2<float> inkAux(ink);
+			const Index2 sizeInk = ink.getSize();
+			for (unsigned int i = 0; i < sizeInk.x; ++i){
+				for (unsigned int j = 0; j < sizeInk.y; ++j){
+					const Index2 id(i, j);
+					/// Calculate global coordinates
+					const Vec2 pos(grid.getCellPos(id));
+					/// Calculate advencion method
+					const Vec2 vel((velocityX[id] + velocityX[Index2(i + 1, j)]) * 0.5f, (velocityY[id] + velocityY[Index2(i, j + 1)]) * 0.5f);
+					const Vec2 endpos(pos - dt * vel);
+					/// Bilineal interpolation with index
+					ink[id] = bilerp(grid.getCellIndex(endpos), inkAux, sizeInk);
+				}
+			}
+		}
 
-        const Index2& size = ink.getSize();
-	    for( unsigned int i = 0; i < size.x; ++i )
-	    for( unsigned int j = 0; j < size.y; ++j )
-	    {
-		    const Index2 id( i, j );
-
-		    const Vec2 pos( grid.getCellPos( id ) );
-		    const Vec2 vel( ( velocityX[ id ] + velocityX[ Index2( i+1, j ) ] ) * 0.5f,
-                            ( velocityY[ id ] + velocityY[ Index2( i, j+1 ) ] ) * 0.5f );
-		    const Vec2 endpos( pos - dt * vel );
-
-		    ink[ id ] = inksampler.getValue( endpos );;
-	    }
-
-        // velocity
-	    Array2< float > ucopy( velocityX );
-        Array2< float > vcopy( velocityY );
-	    FaceSampler usampler( grid, ucopy, 0 );
-	    FaceSampler vsampler( grid, vcopy, 1 );
-        const Index2& sizeu = velocityX.getSize();
-        const Index2& sizev = velocityY.getSize();
-
-	    for( unsigned int i = 0; i < sizeu.x; ++i )
-	    for( unsigned int j = 0; j < sizeu.y; ++j )
-	    {
-		    const Index2 id( i, j );
-            const Index2 idv1( clamp( i-1, 0, sizev.x-1 ), clamp( j  , 0, sizev.y-1 ) );
-            const Index2 idv2( clamp( i  , 0, sizev.x-1 ), clamp( j  , 0, sizev.y-1 ) );
-            const Index2 idv3( clamp( i-1, 0, sizev.x-1 ), clamp( j+1, 0, sizev.y-1 ) );
-            const Index2 idv4( clamp( i  , 0, sizev.x-1 ), clamp( j+1, 0, sizev.y-1 ) );
-
-		    const Vec2 pos( grid.getFaceXPos( id ) );
-		    const Vec2 vel( ucopy[ id ], ( vcopy[ idv1 ] + vcopy[ idv2 ] + vcopy[ idv3 ] + vcopy[ idv4 ] ) * 0.25f );
-		    const Vec2 endpos( pos - dt * vel );
-
-		    velocityX[ id ] = usampler.getValue( endpos );
-	    }
-
-	    for( unsigned int i = 0; i < sizev.x; ++i )
-	    for( unsigned int j = 0; j < sizev.y; ++j )
-	    {
-		    const Index2 id( i, j );
-            const Index2 idu1( clamp( i  , 0, sizeu.x-1 ), clamp( j-1, 0, sizeu.y-1 ) );
-            const Index2 idu2( clamp( i  , 0, sizeu.x-1 ), clamp( j  , 0, sizeu.y-1 ) );
-            const Index2 idu3( clamp( i+1, 0, sizeu.x-1 ), clamp( j-1, 0, sizeu.y-1 ) );
-            const Index2 idu4( clamp( i+1, 0, sizeu.x-1 ), clamp( j  , 0, sizeu.y-1 ) );
-
-		    const Vec2 pos( grid.getFaceYPos( id ) );
-		    const Vec2 vel( ( ucopy[ idu1 ] + ucopy[ idu2 ] + ucopy[ idu3 ] + ucopy[ idu4 ] ) * 0.25f, vcopy[ id ] );
-		    const Vec2 endpos( pos - dt * vel );
-
-		    velocityY[ id ] = vsampler.getValue( endpos );
-	    }
-    }
+		// velocity advection
+		{
+			Array2< float > uAux(velocityX);
+			Array2< float > vAux(velocityY);
+			const Index2 sizeU = velocityX.getSize();
+			const Index2 sizeV = velocityY.getSize();
+			for (unsigned int i = 0; i < sizeU.x; ++i){
+				for (unsigned int j = 0; j < sizeU.y; ++j){
+					const Index2 id(i, j);
+					/// Calculate index of the previus velocities in X to compute the velocityX
+					const Index2 id1(clamp(i - 1, 0, sizeV.x - 1), clamp(j, 0, sizeV.y - 1));
+					const Index2 id2(clamp(i, 0, sizeV.x - 1), clamp(j, 0, sizeV.y - 1));
+					const Index2 id3(clamp(i - 1, 0, sizeV.x - 1), clamp(j + 1, 0, sizeV.y - 1));
+					const Index2 id4(clamp(i, 0, sizeV.x - 1), clamp(j + 1, 0, sizeV.y - 1));
+					/// Calculate global coordinates VelocityX
+					const Vec2 pos(grid.getFaceXPos(id));
+					/// Compute advection methond
+					const Vec2 vel(uAux[id], (vAux[id1] + vAux[id2] + vAux[id3] + vAux[id4])*0.25f);
+					const Vec2 endpos(pos - dt*vel);
+					/// Bilineal interpolation with index, face index in axis 0, horizontal
+					velocityX[id] = bilerp(grid.getFaceIndex(endpos, 0), uAux, sizeU);
+				}
+			}
+			for (unsigned int i = 0; i < sizeV.x; ++i){
+				for (unsigned int j = 0; j < sizeV.y; ++j){
+					const Index2 id(i, j);
+					/// Calculate index of the previus velocities in X to compute the velocityX
+					const Index2 id1(clamp(i, 0, sizeU.x - 1), clamp(j - 1, 0, sizeU.y - 1));
+					const Index2 id2(clamp(i, 0, sizeU.x - 1), clamp(j - 1, 0, sizeU.y - 1));
+					const Index2 id3(clamp(i + 1, 0, sizeU.x - 1), clamp(j, 0, sizeU.y - 1));
+					const Index2 id4(clamp(i + 1, 0, sizeU.x - 1), clamp(j, 0, sizeU.y - 1));
+					/// Calculate global coordinates VelocityY
+					const Vec2 pos(grid.getFaceYPos(id));
+					/// Compute advection methond
+					const Vec2 vel((uAux[id1] + uAux[id2] + uAux[id3] + uAux[id4])*0.25f, vAux[id]);
+					const Vec2 endpos(pos - dt*vel);
+					/// Bilineal interpolation with index, face index in axis 1, vertical
+					velocityY[id] = bilerp(grid.getFaceIndex(endpos, 1), vAux, sizeV);
+				}
+			}
+		}
+	}
 }
 
 // emission
@@ -213,8 +340,19 @@ void Fluid2::fluidEmission( void )
     if( flipEnabled )
 	{
         // modify particles properties if inside the domain
-		for (unsigned int i = 0; i < particles.getSize(); ++i){
 
+		Vec2 ismin = grid.getCellIndex(source.minPosition);
+		Vec2 ismax = grid.getCellIndex(source.maxPosition);
+		Index2 cornermin((int)floor(ismin.x), (int)floor(ismin.y));
+		Index2 cornermax((int)ceil(ismax.x), (int)ceil(ismax.y));
+
+		for (unsigned int i = 0; i < particles.getSize(); ++i){
+			const Vec2& posParticle = particles.getPosition(i);
+			const Vec2 id = grid.getCellIndex(posParticle);
+			if (((int)id.x >= cornermin.x && (int)id.x <= cornermax.x) && ((int)id.y >= cornermin.y && (int)id.y <= cornermax.y)){
+				particles.setInk(i, 1.0);
+				particles.setVelocity(i, vel);
+			}
 		}
 
     }
@@ -382,10 +520,20 @@ void Fluid2::fluidPressureProjection( const float dt )
 
     if( flipEnabled )
     {
-        // calculate FLIP velocity delta
+		for (unsigned int i = 0; i < particles.getSize(); ++i){
+			const Vec2& posParticle = particles.getPosition(i);
+			Vec2 oldVel, newVel;
+			oldVel.x = bilerp(grid.getFaceIndex(posParticle, 0), oldVelocityX, oldVelocityX.getSize());
+			oldVel.y = bilerp(grid.getFaceIndex(posParticle, 1), oldVelocityY, oldVelocityY.getSize());
+			newVel.x = bilerp(grid.getFaceIndex(posParticle, 0), velocityX, velocityX.getSize());
+			newVel.y = bilerp(grid.getFaceIndex(posParticle, 1), velocityY, velocityY.getSize());
+			// calculate FLIP velocity delta
+			const Vec2 velDelta = newVel - oldVel;
 
+			// apply PIC/FLIP to update particles velocities
+			const Vec2 picFlipVel = 0.95 * newVel + 0.05 * velDelta;
+			particles.setVelocity(i, picFlipVel);
 
-        // apply PIC/FLIP to update particles velocities
-
+		}
     }
 }
