@@ -112,29 +112,32 @@ namespace
 	// Add any custom classes or functions here //
 	//////////////////////////////////////////////
 
-	void accumulateCell(Array2<float>& vect, Array2<float>& sum, float val, int i, int j, float fx, float fy){
+	void accumulateCell(Array2<float>& vect, Array2<float>& weights, float val, int i, int j, float fx, float fy){
 		
 		float weight;
 
 		weight = (1 - fx)*(1 - fy);
 		vect.setValue(Index2(i, j), vect.getValue(Index2(i, j)) + weight*val);
-		sum.setValue(Index2(i, j), sum.getValue(Index2(i, j)) + weight);
+		weights.setValue(Index2(i, j), weights.getValue(Index2(i, j)) + weight);
 
 		weight = fx*(1 - fy);
 		vect.setValue(Index2(i + 1, j), vect.getValue(Index2(i + 1, j)) + weight*val);
-		sum.setValue(Index2(i + 1, j), sum.getValue(Index2(i + 1, j)) + weight);
+		weights.setValue(Index2(i + 1, j), weights.getValue(Index2(i + 1, j)) + weight);
 
 		weight = (1 - fx)*fy;
 		vect.setValue(Index2(i, j + 1), vect.getValue(Index2(i, j + 1)) + weight*val);
-		sum.setValue(Index2(i, j + 1), sum.getValue(Index2(i, j + 1)) + weight);
+		weights.setValue(Index2(i, j + 1), weights.getValue(Index2(i, j + 1)) + weight);
 
 		weight = fx*fy;
 		vect.setValue(Index2(i + 1, j + 1), vect.getValue(Index2(i + 1, j + 1)) + weight*val);
-		sum.setValue(Index2(i + 1, j + 1), sum.getValue(Index2(i + 1, j + 1)) + weight);
+		weights.setValue(Index2(i + 1, j + 1), weights.getValue(Index2(i + 1, j + 1)) + weight);
 	}
     
 	/// Control emission variable
 	int count = 0;
+
+	/// Weights grid
+	//Array2 <float> weights(grid.getSize().x + 1, grid.getSize().y + 1);
 }
 
 // init particles
@@ -171,12 +174,6 @@ void Fluid2::fluidAdvection( const float dt )
 {
     if( flipEnabled )
     {
-		//Array2< float > inkAux(ink);
-		//Array2< float > uAux(velocityX);
-		//Array2< float > vAux(velocityY);
-		//const Index2 sizeInk = ink.getSize();
-		//const Index2 sizeU = velocityX.getSize();
-		//const Index2 sizeV = velocityY.getSize();
 		//std::cout << "===== Grid antes =====" << std::endl;
 		//std::cout << "=> Ink grid" << std::endl;
 		//for (unsigned int i = 0; i < ink.getSize().x; ++i){
@@ -196,18 +193,18 @@ void Fluid2::fluidAdvection( const float dt )
 		//		std::cout << velocityY.getValue(Index2(i, j)) << std::ends;
 		//	std::cout << "\n" << std::ends;
 		//}
+
         // move particles with RK2 with grid velocities
 		for (unsigned int i = 0; i < particles.getSize(); ++i){
 			/// foreach particle search the index cell
 			const Vec2& posParticle = particles.getPosition(i);
 			Vec2 auxVel;
-			float auxInk;
+
 			// first stage of Runge-Kutta 2 (do a half Euler step)
 			auxVel.x = bilerp(grid.getFaceIndex(posParticle, 0), velocityX, velocityX.getSize());
 			auxVel.y = bilerp(grid.getFaceIndex(posParticle, 1), velocityY, velocityY.getSize());
-			//auxInk = bilerp(grid.getCellIndex(posParticle), inkAux, sizeInk);
 			const Vec2 midPos = posParticle + 0.5*dt*auxVel;
-			//const float midInk = posParticle + 0.5*dt*auxVel;
+
 			// second stage of Runge-Kutta 2
 			auxVel.x = bilerp(grid.getFaceIndex(midPos, 0), velocityX, velocityX.getSize());
 			auxVel.y = bilerp(grid.getFaceIndex(midPos, 1), velocityY, velocityY.getSize());
@@ -243,7 +240,6 @@ void Fluid2::fluidAdvection( const float dt )
 		}
 
         // create velocityX grid from particles
-		//Array2 <float> weightsVelocityX(grid.getSizeFaces(0));
 		weights.clear();
 		velocityX.clear();
 		for (unsigned int i = 0; i < particles.getSize(); ++i){
@@ -252,6 +248,7 @@ void Fluid2::fluidAdvection( const float dt )
 			//Assign weights for each node
 			accumulateCell(velocityX, weights, particles.getVelocity(i).x, (int)uVel.x, (int)uVel.y, uVel.x - floorf(uVel.x), uVel.y - floorf(uVel.x) );
 		}
+		/// Normalize weights
 		for (unsigned int j = 0; j<velocityX.getSize().y; ++j){
 			for (unsigned int i = 0; i < velocityX.getSize().x; ++i){
 				const Index2 id = Index2(i, j);
@@ -262,7 +259,6 @@ void Fluid2::fluidAdvection( const float dt )
 		
 
         // create velocityY grid from particles
-		//Array2 <float> weightsVelocityY(grid.getSizeFaces(1));
 		weights.clear();
 		velocityY.clear();
 		for (unsigned int i = 0; i < particles.getSize(); ++i){
@@ -271,6 +267,7 @@ void Fluid2::fluidAdvection( const float dt )
 			//Assign weights for each node
 			accumulateCell(velocityY, weights, particles.getVelocity(i).y, (int)vVel.x, (int)vVel.y, vVel.x - floorf(vVel.x), vVel.y - floorf(vVel.x) );
 		}
+		/// Normalize weights
 		for (unsigned int j = 0; j<velocityY.getSize().y; ++j){
 			for (unsigned int i = 0; i < velocityY.getSize().x; ++i){
 				const Index2 id = Index2(i, j);
@@ -640,7 +637,7 @@ void Fluid2::fluidPressureProjection( const float dt )
 			const Vec2 velDelta = newVel - oldVel;
 
 			// apply PIC/FLIP to update particles velocities
-			const Vec2 picFlipVel = 0.95 * newVel + 0.05 * velDelta;
+			const Vec2 picFlipVel = 0.95 * particles.getVelocity(i)+velDelta + 0.05 * newVel;
 			particles.setVelocity(i, picFlipVel);
 
 		}
